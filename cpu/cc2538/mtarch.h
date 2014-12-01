@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2010, Loughborough University - Computer Science
- * All rights reserved.
+ * Copyright (c) 2014 Andreas Dröscher <contiki@anticat.ch>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,21 +27,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-/*
- * \file
- * Stub header file for multi-threading. It doesn't do anything, it
- * just exists so that mt.c can compile cleanly.
- *
- * This is based on the original mtarch.h for z80 by Takahide Matsutsuka
- *
- * \author
- * George Oikonomou - <oikonomou@users.sourceforge.net>
- */
+
 #ifndef MTARCH_H_
 #define MTARCH_H_
 
+#include "contiki.h"
+#include "stdint.h"
+
+#ifdef MTARCH_CONF_STACKSIZE
+#define MTARCH_STACKSIZE MTARCH_CONF_STACKSIZE
+#else
+#define MTARCH_STACKSIZE 1024
+#endif
+
+/**
+ * Structure of the Initial Stack
+ */
+typedef struct {
+  //Stack frame that is saved by the hardware
+  void* r4;
+  void* r5;
+  void* r6;
+  void* r7;
+  void* r8;
+  void* r9;
+  void* r10;
+  void* r11;
+  //Stack frame that is saved by the hardware
+  void* r0;   //Ptr to Argument (*data)
+  void* r1;
+  void* r2;
+  void* r3;
+  void* r12;
+  void* lr;   //Ptr to Cleanup Function
+  void* pc;   //Ptr to Function (*function)
+  void* psr;  //Reset Value: 0x01000000
+} stack_struture_t;
+
 struct mtarch_thread {
-  unsigned char *sp;
+  uint32_t stack[MTARCH_STACKSIZE];
+  void     *sp;
 };
 
 #endif /* MTARCH_H_ */
