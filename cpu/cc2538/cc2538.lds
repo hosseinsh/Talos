@@ -103,6 +103,8 @@ SECTIONS
         *(.bss*)
         *(COMMON)
         _ebss = .;
+        _heapdata  = ABSOLUTE(.); 
+        _eheapdata = _bss + SRAM_LEN; 
     } > SRAM
 
 #if (LPM_CONF_MAX_PM==2) && (LPM_CONF_ENABLE != 0)
