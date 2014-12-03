@@ -30,31 +30,37 @@
 
 #include "global.h"
 
+//-- Glue Code - SHA ----------------------------------------------------------
 #ifdef WITH_SHA256
-/** Aaron D. Gifford's implementation of SHA256
- *  see http://www.aarongifford.com/ */
-#include "sha2/sha2.h"
+#include "dev/sha256.h"
 
-typedef SHA256_CTX dtls_hash_ctx;
+typedef sha256_state_t dtls_hash_ctx;
 typedef dtls_hash_ctx *dtls_hash_t;
-#define DTLS_HASH_CTX_SIZE sizeof(SHA256_CTX)
+#define DTLS_HASH_CTX_SIZE sizeof(sha256_state_t)
 
 static inline void
 dtls_hash_init(dtls_hash_t ctx) {
-  SHA256_Init((SHA256_CTX *)ctx);
+  crypto_enable();
+  sha256_init((sha256_state_t *)ctx);
+  crypto_disable();
 }
 
 static inline void 
 dtls_hash_update(dtls_hash_t ctx, const unsigned char *input, size_t len) {
-  SHA256_Update((SHA256_CTX *)ctx, input, len);
+  crypto_enable();
+  sha256_process((sha256_state_t *)ctx, input, len);
+  crypto_disable();
 }
 
 static inline size_t
 dtls_hash_finalize(unsigned char *buf, dtls_hash_t ctx) {
-  SHA256_Final(buf, (SHA256_CTX *)ctx);
-  return SHA256_DIGEST_LENGTH;
+  crypto_enable();
+  sha256_done((sha256_state_t *)ctx, buf);
+  crypto_disable();
+  return 32; //SHA256_DIGEST_LENGTH
 }
 #endif /* WITH_SHA256 */
+//-----------------------------------------------------------------------------
 
 #ifndef WITH_CONTIKI
 static inline void dtls_hmac_storage_init()

@@ -36,6 +36,8 @@
 #ifndef WITH_CONTIKI
 #include <stdlib.h>
 #include "uthash.h"
+#else
+#include <core/lib/assert.h>
 #endif /* WITH_CONTIKI */
 
 #include "debug.h"
@@ -47,9 +49,7 @@
 #include "session.h"
 #include "prng.h"
 
-#ifdef WITH_SHA256
-#  include "sha2/sha2.h"
-#endif
+#include "ccm-glue.h"
 
 #define dtls_set_version(H,V) dtls_int_to_uint16((H)->version, (V))
 #define dtls_set_content_type(H,V) ((H)->content_type = (V) & 0xff)
@@ -162,7 +162,7 @@ free_context(dtls_context_t *context) {
 void
 dtls_init() {
   dtls_clock_init();
-  crypto_init();
+  dtls_crypto_init();
   netq_init();
   peer_init();
 }
@@ -3739,7 +3739,7 @@ dtls_new_context(void *app_data) {
   dtls_ticks(&now);
 #ifdef WITH_CONTIKI
   /* FIXME: need something better to init PRNG here */
-  dtls_prng_init(now);
+  //dtls_prng_init(now);
 #else /* WITH_CONTIKI */
   if (!urandom) {
     dtls_emerg("cannot initialize PRNG\n");

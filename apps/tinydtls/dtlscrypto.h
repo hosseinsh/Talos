@@ -32,13 +32,10 @@
 
 #include "t_list.h"
 
-#include "aes/rijndael.h"
-
 #include "global.h"
 #include "state.h"
 #include "numeric.h"
 #include "hmac.h"
-#include "ccm.h"
 
 /* TLS_PSK_WITH_AES_128_CCM_8 */
 #define DTLS_MAC_KEY_LENGTH    0
@@ -68,7 +65,7 @@ typedef enum {
 
 /** Crypto context for TLS_PSK_WITH_AES_128_CCM_8 cipher suite. */
 typedef struct {
-  rijndael_ctx ctx;		       /**< AES-128 encryption context */
+  void *ctx;		       /**< Not Used, Key is always in slot 0 */
 } aes128_ccm_t;
 
 typedef struct dtls_cipher_context_t {
@@ -333,7 +330,7 @@ void dtls_ecdsa_create_sig(const unsigned char *priv_key, size_t key_size,
 int dtls_ecdsa_verify_sig_hash(const unsigned char *pub_key_x,
 			       const unsigned char *pub_key_y, size_t key_size,
 			       const unsigned char *sign_hash, size_t sign_hash_size,
-			       unsigned char *result_r, unsigned char *result_s);
+			       const unsigned char *result_r, const unsigned char *result_s);
 
 int dtls_ecdsa_verify_sig(const unsigned char *pub_key_x,
 			  const unsigned char *pub_key_y, size_t key_size,
@@ -353,7 +350,7 @@ void dtls_handshake_free(dtls_handshake_parameters_t *handshake);
 dtls_security_parameters_t *dtls_security_new();
 
 void dtls_security_free(dtls_security_parameters_t *security);
-void crypto_init();
+void dtls_crypto_init();
 
 #endif /* _DTLS_CRYPTO_H_ */
 

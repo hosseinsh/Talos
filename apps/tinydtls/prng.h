@@ -50,6 +50,8 @@ dtls_prng(unsigned char *buf, size_t len)
 	return contiki_prng_impl(buf, len);
 }
 #else
+#include <core/lib/random.h> 
+
 /**
  * Fills \p buf with \p len random bytes. This is the default
  * implementation for prng().  You might want to change prng() to use

@@ -39,11 +39,14 @@
 #include "debug.h"
 #include "numeric.h"
 #include "dtls.h"
-#include "crypto.h"
+#include "dtlscrypto.h"
 #include "ccm.h"
-#include "ecc/ecc.h"
+#include "pka.h"
 #include "prng.h"
 #include "netq.h"
+
+#include "ecc-glue.h"
+#include "ccm-glue.h"
 
 #ifndef WITH_CONTIKI
 #include <pthread.h>
@@ -73,7 +76,7 @@ static void dtls_cipher_context_release(void)
 }
 
 #ifndef WITH_CONTIKI
-void crypto_init()
+void dtls_crypto_init()
 {
 }
 
@@ -98,9 +101,11 @@ static void dtls_security_dealloc(dtls_security_parameters_t *security) {
 MEMB(handshake_storage, dtls_handshake_parameters_t, DTLS_HANDSHAKE_MAX);
 MEMB(security_storage, dtls_security_parameters_t, DTLS_SECURITY_MAX);
 
-void crypto_init() {
+void dtls_crypto_init() {
   memb_init(&handshake_storage);
   memb_init(&security_storage);
+  pka_init(); pka_disable();
+  crypto_init(); crypto_disable();
 }
 
 static dtls_handshake_parameters_t *dtls_handshake_malloc() {
@@ -279,6 +284,7 @@ dtls_mac(dtls_hmac_context_t *hmac_ctx,
   dtls_hmac_finalize(hmac_ctx, buf);
 }
 
+#if 0
 static size_t
 dtls_ccm_encrypt(aes128_ccm_t *ccm_ctx, const unsigned char *src, size_t srclen,
 		 unsigned char *buf, 
@@ -312,6 +318,7 @@ dtls_ccm_decrypt(aes128_ccm_t *ccm_ctx, const unsigned char *src,
 				 aad, la);
   return len;
 }
+#endif
 
 #ifdef DTLS_PSK
 int
@@ -483,7 +490,7 @@ int
 dtls_ecdsa_verify_sig_hash(const unsigned char *pub_key_x,
 			   const unsigned char *pub_key_y, size_t key_size,
 			   const unsigned char *sign_hash, size_t sign_hash_size,
-			   unsigned char *result_r, unsigned char *result_s) {
+			   const unsigned char *result_r,const unsigned char *result_s) {
   uint32_t pub_x[8];
   uint32_t pub_y[8];
   uint32_t hash[8];
@@ -529,17 +536,16 @@ dtls_encrypt(const unsigned char *src, size_t length,
 {
   int ret;
   struct dtls_cipher_context_t *ctx = dtls_cipher_context_get();
-
-  ret = rijndael_set_key_enc_only(&ctx->data.ctx, key, 8 * keylen);
+  ret = hw_ccm_set_key(key, 8 * keylen);
   if (ret < 0) {
     /* cleanup everything in case the key has the wrong size */
-    dtls_warn("cannot set rijndael key\n");
+    dtls_warn("cannot set aes key\n");
     goto error;
   }
 
   if (src != buf)
     memmove(buf, src, length);
-  ret = dtls_ccm_encrypt(&ctx->data, src, length, buf, nounce, aad, la);
+  ret = hw_ccm_encrypt(&ctx->data, buf, length, buf, nounce, aad, la);
 
 error:
   dtls_cipher_context_release();
@@ -555,17 +561,16 @@ dtls_decrypt(const unsigned char *src, size_t length,
 {
   int ret;
   struct dtls_cipher_context_t *ctx = dtls_cipher_context_get();
-
-  ret = rijndael_set_key_enc_only(&ctx->data.ctx, key, 8 * keylen);
+  ret = hw_ccm_set_key(key, 8 * keylen);
   if (ret < 0) {
     /* cleanup everything in case the key has the wrong size */
-    dtls_warn("cannot set rijndael key\n");
+    dtls_warn("cannot set aes key\n");
     goto error;
   }
 
   if (src != buf)
     memmove(buf, src, length);
-  ret = dtls_ccm_decrypt(&ctx->data, src, length, buf, nounce, aad, la);
+  ret = hw_ccm_decrypt(&ctx->data, buf, length, buf, nounce, aad, la);
 
 error:
   dtls_cipher_context_release();
