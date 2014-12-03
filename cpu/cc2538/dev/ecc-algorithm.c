@@ -159,12 +159,12 @@ PT_THREAD(ecc_dsa_verify(ecc_dsa_verify_state_t *state)) {
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKABigNumModGetResult(state->u2, size, state->rv));
 
-  //Calculate p1 = u1 * A
+  //Calculate p1 = u1 * A (Generator)
   CHECK_RESULT(PKAECCMultiplyStart(state->u1, &point, state->curve_info, &state->rv, state->process));
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKAECCMultiplyGetResult(&state->p1, state->rv));
 
-  //Calculate p2 = u1 * B
+  //Calculate p2 = u2 * B (Public Key)
   CHECK_RESULT(PKAECCMultiplyStart(state->u2, &state->public, state->curve_info, &state->rv, state->process));
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKAECCMultiplyGetResult(&state->p2, state->rv));

@@ -403,7 +403,7 @@ int dtls_ec_key_from_uint32_asn1(const uint32_t *key, size_t key_size,
 }
 
 int dtls_ecdh_pre_master_secret(unsigned char *priv_key,
-				   unsigned char *pub_key_x,
+                                   unsigned char *pub_key_x,
                                    unsigned char *pub_key_y,
                                    size_t key_size,
                                    unsigned char *result,

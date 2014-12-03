@@ -2634,7 +2634,7 @@ check_server_certificate(dtls_context_t *ctx,
       return dtls_alert_fatal_create(DTLS_ALERT_DECODE_ERROR);
     }
 
-    //Validate Certificate Extract Keyspeer->handshake_params->server_cert_type
+    //Validate Certificate Extract Keys
     err = CALL(ctx, verify_ecdsa_cert, &peer->session,
          data, cert_len,
          config->keyx.ecdsa.other_pub_x,

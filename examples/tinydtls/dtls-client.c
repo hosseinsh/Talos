@@ -150,7 +150,7 @@ int verify_ecdsa_key(struct dtls_context_t *ctx,
 
 /**
  * Called during handshake to check the peer's certificate and
- * extract the peer's public If the public key matches the session
+ * extract the public key. If the public key matches the session
  * and should be considerate valid the return value must be @c 0.
  * If not valid, the return value must be less than zero.
  *
