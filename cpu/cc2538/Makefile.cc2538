@@ -78,7 +78,7 @@ CUSTOM_RULE_LINK=1
 
 %.elf: $(TARGET_STARTFILES) %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(LDSCRIPT)
 	$(TRACE_LD)
-	$(Q)$(LD) $(LDFLAGS) ${filter-out $(LDSCRIPT) %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) -o $@
+	$(Q)$(LD) $(LDFLAGS) -Wl,--start-group ${filter-out $(LDSCRIPT) %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) -lc -Wl,--end-group -o $@
 
 %.hex: %.elf
 	$(OBJCOPY) -O ihex $< $@
