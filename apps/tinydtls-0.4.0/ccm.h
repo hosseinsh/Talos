@@ -27,7 +27,9 @@
 #define _CCM_H_
 
 #include "config.h"
+#if !AES_HARDWARE
 #include "aes/rijndael.h"
+#endif /* !AES_HARDWARE */
 
 /* implementation of Counter Mode CBC-MAC, RFC 3610 */
 
@@ -55,16 +57,30 @@
  * \param la  The number of additional authentication octets (may be zero).
  * \return FIXME
  */
+#if AES_HARDWARE
+long int
+dtls_ccm_encrypt_message(size_t M, size_t L,
+			 unsigned char NNCE[DTLS_CCM_BLOCKSIZE],
+			 unsigned char *msg, size_t lm,
+			 const unsigned char *aad, size_t la);
+
+long int
+dtls_ccm_decrypt_message(size_t M, size_t L,
+			 unsigned char NNCE[DTLS_CCM_BLOCKSIZE],
+			 unsigned char *msg, size_t lm,
+			 const unsigned char *aad, size_t la);
+#else /* AES_HARDWARE */
 long int
 dtls_ccm_encrypt_message(rijndael_ctx *ctx, size_t M, size_t L, 
-			 unsigned char N[DTLS_CCM_BLOCKSIZE], 
+			 unsigned char NNCE[DTLS_CCM_BLOCKSIZE],
 			 unsigned char *msg, size_t lm, 
 			 const unsigned char *aad, size_t la);
 
 long int
 dtls_ccm_decrypt_message(rijndael_ctx *ctx, size_t M, size_t L, 
-			 unsigned char N[DTLS_CCM_BLOCKSIZE], 
+			 unsigned char NNCE[DTLS_CCM_BLOCKSIZE],
 			 unsigned char *msg, size_t lm, 
 			 const unsigned char *aad, size_t la);
+#endif /* AES_HARDWARE */
 
 #endif /* _CCM_H_ */

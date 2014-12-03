@@ -46,14 +46,14 @@ block0(size_t M,       /* number of auth bytes */
        size_t L,       /* number of bytes to encode message length */
        size_t la,      /* l(a) octets additional authenticated data */
        size_t lm,      /* l(m) message length */
-       unsigned char N[DTLS_CCM_BLOCKSIZE],
+       unsigned char NNCE[DTLS_CCM_BLOCKSIZE],
        unsigned char *result) {
   int i;
 
   result[0] = CCM_FLAGS(la, M, L);
 
   /* copy the nonce */
-  memcpy(result + 1, N, DTLS_CCM_BLOCKSIZE - L);
+  memcpy(result + 1, NNCE, DTLS_CCM_BLOCKSIZE - L);
   
   for (i=0; i < L; i++) {
     result[15-i] = lm & 0xff;
@@ -75,13 +75,26 @@ block0(size_t M,       /* number of auth bytes */
  *             is placed.
  * \return     The result is written to \p X.
  */
+#if AES_HARDWARE
 void
-add_auth_data(rijndael_ctx *ctx, const unsigned char *msg, size_t la,
+add_auth_data(const unsigned char *msg, size_t la,
 	      unsigned char B[DTLS_CCM_BLOCKSIZE], 
 	      unsigned char X[DTLS_CCM_BLOCKSIZE]) {
+#else
+void
+add_auth_data(rijndael_ctx *ctx, const unsigned char *msg, size_t la,
+	      unsigned char B[DTLS_CCM_BLOCKSIZE],
+	      unsigned char X[DTLS_CCM_BLOCKSIZE]) {
+#endif /* AES_HARDWARE */
+
   size_t i,j; 
 
+#if AES_HARDWARE
+  cc2520_aes_cipher(B, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+  memcpy(X, B, DTLS_CCM_BLOCKSIZE); /* move cipher into X */
+#else /* AES_HARDWARE */
   rijndael_encrypt(ctx, B, X);
+#endif /* AES_HARDWARE */
 
   memset(B, 0, DTLS_CCM_BLOCKSIZE);
 
@@ -121,14 +134,24 @@ add_auth_data(rijndael_ctx *ctx, const unsigned char *msg, size_t la,
     
     memxor(B, X, DTLS_CCM_BLOCKSIZE);
   
+#if AES_HARDWARE
+  cc2520_aes_cipher(B, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+  memcpy(X, B, DTLS_CCM_BLOCKSIZE); /* move cipher into X */
+#else /* AES_HARDWARE */
   rijndael_encrypt(ctx, B, X);
+#endif /* AES_HARDWARE */
   
   while (la > DTLS_CCM_BLOCKSIZE) {
     for (i = 0; i < DTLS_CCM_BLOCKSIZE; ++i)
       B[i] = X[i] ^ *msg++;
     la -= DTLS_CCM_BLOCKSIZE;
 
+#if AES_HARDWARE
+    cc2520_aes_cipher(B, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+    memcpy(X, B, DTLS_CCM_BLOCKSIZE); /* move cipher into X */
+#else /* AES_HARDWARE */
     rijndael_encrypt(ctx, B, X);
+#endif /* AES_HARDWARE */
   }
   
   if (la) {
@@ -136,25 +159,46 @@ add_auth_data(rijndael_ctx *ctx, const unsigned char *msg, size_t la,
     memcpy(B, msg, la);
     memxor(B, X, DTLS_CCM_BLOCKSIZE);
 
-    rijndael_encrypt(ctx, B, X);  
+#if AES_HARDWARE
+    cc2520_aes_cipher(B, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+    memcpy(X, B, DTLS_CCM_BLOCKSIZE); /* move cipher into X */
+#else /* AES_HARDWARE */
+    rijndael_encrypt(ctx, B, X);
+#endif /* AES_HARDWARE */
   } 
 }
 
+#if AES_HARDWARE
+static inline void
+encrypt(size_t L, unsigned long counter,
+#else /* AES_HARDWARE */
 static inline void
 encrypt(rijndael_ctx *ctx, size_t L, unsigned long counter,
+#endif /* AES_HARDWARE */
 	unsigned char *msg, size_t len,
 	unsigned char A[DTLS_CCM_BLOCKSIZE],
 	unsigned char S[DTLS_CCM_BLOCKSIZE]) {
 
-  static unsigned long C;
+  static unsigned long Cc;
 
-  SET_COUNTER(A, L, counter, C);    
+  SET_COUNTER(A, L, counter, Cc);
+
+#if AES_HARDWARE
+  cc2520_aes_cipher(A, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+  memcpy(S, A, DTLS_CCM_BLOCKSIZE); /* move cipher into S */
+#else /* AES_HARDWARE */
   rijndael_encrypt(ctx, A, S);
+#endif /* AES_HARDWARE */
+
   memxor(msg, S, len);
 }
-
+#if AES_HARDWARE
 static inline void
-mac(rijndael_ctx *ctx, 
+mac(
+#else /* AES_HARDWARE */
+static inline void
+mac(rijndael_ctx *ctx,
+#endif /* AES_HARDWARE */
     unsigned char *msg, size_t len,
     unsigned char B[DTLS_CCM_BLOCKSIZE],
     unsigned char X[DTLS_CCM_BLOCKSIZE]) {
@@ -163,17 +207,30 @@ mac(rijndael_ctx *ctx,
   for (i = 0; i < len; ++i)
     B[i] = X[i] ^ msg[i];
 
+#if AES_HARDWARE
+  cc2520_aes_cipher(B, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+  memcpy(X, B, DTLS_CCM_BLOCKSIZE); /* move cipher into X */
+#else /* AES_HARDWARE */
   rijndael_encrypt(ctx, B, X);
+#endif /* AES_HARDWARE */
 
 }
-
+#if AES_HARDWARE
 long int
-dtls_ccm_encrypt_message(rijndael_ctx *ctx, size_t M, size_t L, 
-			 unsigned char N[DTLS_CCM_BLOCKSIZE], 
+dtls_ccm_encrypt_message(size_t M, size_t L,
+			 unsigned char NNC[DTLS_CCM_BLOCKSIZE], 
 			 unsigned char *msg, size_t lm, 
 			 const unsigned char *aad, size_t la) {
+#else /* AES_HARDWARE */
+long int
+dtls_ccm_encrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
+			 unsigned char NNC[DTLS_CCM_BLOCKSIZE],
+			 unsigned char *msg, size_t lm,
+			 const unsigned char *aad, size_t la) {
+#endif /* AES_HARDWARE */
+
   size_t i, len;
-  unsigned long C;
+  unsigned long Cc;
   unsigned long counter = 1; /* \bug does not work correctly on ia32 when
 			             lm >= 2^16 */
   unsigned char A[DTLS_CCM_BLOCKSIZE]; /* A_i blocks for encryption input */
@@ -183,21 +240,33 @@ dtls_ccm_encrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
 
   len = lm;			/* save original length */
   /* create the initial authentication block B0 */
-  block0(M, L, la, lm, N, B);
+  block0(M, L, la, lm, NNC, B);
+#if AES_HARDWARE
+  add_auth_data(aad, la, B, X);
+#else /* AES_HARDWARE */
   add_auth_data(ctx, aad, la, B, X);
+#endif /*AES_HARDWARE */
 
   /* initialize block template */
   A[0] = L-1;
 
   /* copy the nonce */
-  memcpy(A + 1, N, DTLS_CCM_BLOCKSIZE - L);
+  memcpy(A + 1, NNC, DTLS_CCM_BLOCKSIZE - L);
   
   while (lm >= DTLS_CCM_BLOCKSIZE) {
     /* calculate MAC */
+#if AES_HARDWARE
+    mac(msg, DTLS_CCM_BLOCKSIZE, B, X);
+#else /* AES_HARDWARE */
     mac(ctx, msg, DTLS_CCM_BLOCKSIZE, B, X);
+#endif /* AES_HARDWARE */
 
     /* encrypt */
+#if AES_HARDWARE
+    encrypt(L, counter, msg, DTLS_CCM_BLOCKSIZE, A, S);
+#else /* AES_HARDWARE */
     encrypt(ctx, L, counter, msg, DTLS_CCM_BLOCKSIZE, A, S);
+#endif /* AES_HARDWARE */
 
     /* update local pointers */
     lm -= DTLS_CCM_BLOCKSIZE;
@@ -212,33 +281,58 @@ dtls_ccm_encrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
      * (i.e., we can use memcpy() here).
      */
     memcpy(B + lm, X + lm, DTLS_CCM_BLOCKSIZE - lm);
+
+#if AES_HARDWARE
+    mac(msg, lm, B, X);
+#else /* AES_HARDWARE */
     mac(ctx, msg, lm, B, X);
+#endif /* AES_HARDWARE */
 
     /* encrypt */
+#if AES_HARDWARE
+    encrypt(L, counter, msg, lm, A, S);
+#else /* AES_HARDWARE */
     encrypt(ctx, L, counter, msg, lm, A, S);
+#endif /* AES_HARDWARE */
 
     /* update local pointers */
     msg += lm;
   }
   
   /* calculate S_0 */  
-  SET_COUNTER(A, L, 0, C);
-  rijndael_encrypt(ctx, A, S);
+  SET_COUNTER(A, L, 0, Cc);
 
+#if AES_HARDWARE
+  cc2520_aes_cipher(A, DTLS_CCM_BLOCKSIZE, 0); /* in-place encryption */
+  memcpy(S, A, DTLS_CCM_BLOCKSIZE); /* move cipher into S */
+#else /* AES_HARDWARE */
+  rijndael_encrypt(ctx, A, S);
+#endif /* AES_HARDWARE */
+
+  memcpy(msg, X, M);
   for (i = 0; i < M; ++i)
-    *msg++ = X[i] ^ S[i];
+      *msg++ ^= S[i];
+
 
   return len + M;
 }
 
+#if AES_HARDWARE
+long int
+dtls_ccm_decrypt_message(size_t M, size_t L,
+			 unsigned char NNCE[DTLS_CCM_BLOCKSIZE],
+			 unsigned char *msg, size_t lm,
+			 const unsigned char *aad, size_t la) {
+#else AES_HARDWARE
 long int
 dtls_ccm_decrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
-			 unsigned char N[DTLS_CCM_BLOCKSIZE], 
+			 unsigned char NNCE[DTLS_CCM_BLOCKSIZE], 
 			 unsigned char *msg, size_t lm, 
 			 const unsigned char *aad, size_t la) {
-  
+#endif /* AES_HARDWARE */
+
   size_t len;
-  unsigned long C;
+  unsigned long Cc;
   unsigned long counter = 1; /* \bug does not work correctly on ia32 when
 			             lm >= 2^16 */
   unsigned char A[DTLS_CCM_BLOCKSIZE]; /* A_i blocks for encryption input */
@@ -253,21 +347,33 @@ dtls_ccm_decrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
   lm -= M;	      /* detract MAC size*/
 
   /* create the initial authentication block B0 */
-  block0(M, L, la, lm, N, B);
+  block0(M, L, la, lm, NNCE, B);
+#if AES_HARDWARE
+  add_auth_data(aad, la, B, X);
+#else /* AES_HARDWARE */
   add_auth_data(ctx, aad, la, B, X);
+#endif /* AES_HARDWARE */
 
   /* initialize block template */
   A[0] = L-1;
 
   /* copy the nonce */
-  memcpy(A + 1, N, DTLS_CCM_BLOCKSIZE - L);
+  memcpy(A + 1, NNCE, DTLS_CCM_BLOCKSIZE - L);
   
   while (lm >= DTLS_CCM_BLOCKSIZE) {
     /* decrypt */
+#if AES_HARDWARE
+    encrypt(L, counter, msg, DTLS_CCM_BLOCKSIZE, A, S);
+#else /* AES_HARDWARE */
     encrypt(ctx, L, counter, msg, DTLS_CCM_BLOCKSIZE, A, S);
+#endif /* AES_HARDWARE */
     
     /* calculate MAC */
+#if AES_HARDWARE
+    mac(msg, DTLS_CCM_BLOCKSIZE, B, X);
+#else /* AES_HARDWARE */
     mac(ctx, msg, DTLS_CCM_BLOCKSIZE, B, X);
+#endif /* AES_HARDWARE */
 
     /* update local pointers */
     lm -= DTLS_CCM_BLOCKSIZE;
@@ -277,7 +383,11 @@ dtls_ccm_decrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
 
   if (lm) {
     /* decrypt */
+#if AES_HARDWARE
+    encrypt(L, counter, msg, lm, A, S);
+#else /* AES_HARDWARE */
     encrypt(ctx, L, counter, msg, lm, A, S);
+#endif /* AES_HARDWARE */
 
     /* Calculate MAC. Note that msg ends in the MAC so we must
      * construct B to contain X ^ msg for the first lm bytes (done in
@@ -285,15 +395,25 @@ dtls_ccm_decrypt_message(rijndael_ctx *ctx, size_t M, size_t L,
      * (i.e., we can use memcpy() here).
      */
     memcpy(B + lm, X + lm, DTLS_CCM_BLOCKSIZE - lm);
+#if AES_HARDWARE
+    mac(msg, lm, B, X);
+#else /* AES_HARDWARE */
     mac(ctx, msg, lm, B, X); 
+#endif /* AES_HARDWARE */
 
     /* update local pointers */
     msg += lm;
   }
   
   /* calculate S_0 */  
-  SET_COUNTER(A, L, 0, C);
+  SET_COUNTER(A, L, 0, Cc);
+
+#if AES_HARDWARE
+  cc2520_aes_cipher(A, DTLS_CCM_BLOCKSIZE, 0); /* in-line encryption */
+  memcpy(S, A, DTLS_CCM_BLOCKSIZE); /* move cipher into S */
+#else /* AES_HARDWARE */
   rijndael_encrypt(ctx, A, S);
+#endif /* AES_HARDWARE */
 
   memxor(msg, S, M);
 

@@ -50,6 +50,8 @@
 #  include "sha2/sha2.h"
 #endif
 
+#define PRINTF(...) printf(__VA_ARGS__)
+
 #define dtls_set_version(H,V) dtls_int_to_uint16(&(H)->version, (V))
 #define dtls_set_content_type(H,V) ((H)->content_type = (V) & 0xff)
 #define dtls_set_length(H,V)  ((H)->length = (V))

@@ -66,7 +66,7 @@ typedef enum { AES128=0
 /** Crypto context for TLS_PSK_WITH_AES_128_CCM_8 cipher suite. */
 typedef struct {
   rijndael_ctx ctx;		       /**< AES-128 encryption context */
-  unsigned char N[DTLS_CCM_BLOCKSIZE]; /**< nonce */
+  unsigned char NNCE[DTLS_CCM_BLOCKSIZE]; /**< nonce */
 } aes128_ccm_t;
 
 typedef struct dtls_cipher_context_t {

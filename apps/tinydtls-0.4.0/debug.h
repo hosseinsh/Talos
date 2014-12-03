@@ -49,5 +49,6 @@ void dsrv_log(log_t level, char *format, ...);
 #define info(...) dsrv_log(LOG_INFO, __VA_ARGS__)
 #define warn(...) dsrv_log(LOG_WARN, __VA_ARGS__)
 #define debug(...) dsrv_log(LOG_DEBUG, __VA_ARGS__)
+#define PRINTF(...) printf(__VA_ARGS__)
 
 #endif /* _DEBUG_H_ */
