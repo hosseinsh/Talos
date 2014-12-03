@@ -123,6 +123,8 @@ typedef struct {
 
   dtls_compression_t compression;		/**< compression method */
   dtls_cipher_t cipher;		/**< cipher type */
+  uint8 client_cert_type;
+  uint8 server_cert_type;
   unsigned int do_client_auth:1;
   union {
 #ifdef DTLS_ECC

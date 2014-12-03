@@ -43,6 +43,6 @@
 #define WITH_CONTIKI 1
 
 /** We are using x509 so we need a lot of space */
-#define DTLS_MAX_BUF 200
+#define DTLS_MAX_BUF 512
 
 #endif /* _DTLS_TINYDTLS_H_ */

@@ -498,6 +498,16 @@ static inline int is_ecdsa_supported(dtls_context_t *ctx, int is_client)
 #endif /* DTLS_ECC */
 }
 
+/** returns true if the application is configured for x509 certificates */
+static inline int is_x509_supported(dtls_context_t *ctx)
+{
+#ifdef DTLS_ECC
+  return ctx && ctx->h && ctx->h->verify_ecdsa_cert;
+#else
+  return 0;
+#endif /* DTLS_ECC */
+}
+
 /** Returns true if the application is configured for ecdhe_ecdsa with
   * client authentication */
 static inline int is_ecdsa_client_auth_supported(dtls_context_t *ctx)
@@ -722,8 +732,8 @@ static int verify_ext_eliptic_curves(uint8 *data, size_t data_length) {
   return dtls_alert_fatal_create(DTLS_ALERT_HANDSHAKE_FAILURE);
 }
 
-static int verify_ext_cert_type(uint8 *data, size_t data_length) {
-  int i, cert_type;
+static int verify_ext_cert_type(uint8* cert_type_out, uint8 *data, size_t data_length) {
+  int i, cert_type; uint8* p;
 
   /* length of cert type list */
   i = dtls_uint8_to_int(data);
@@ -732,14 +742,33 @@ static int verify_ext_cert_type(uint8 *data, size_t data_length) {
     dtls_warn("the list of the supported certificate types should be tls extension length - 1\n");
     return dtls_alert_fatal_create(DTLS_ALERT_HANDSHAKE_FAILURE);
   }
-
+  
+  /* We look for TLS_CERT_TYPE_PUBLIC_KEY */
+  p = data;
   for (i = data_length - sizeof(uint8); i > 0; i -= sizeof(uint8)) {
     /* check if this cert type is supported */
-    cert_type = dtls_uint8_to_int(data);
-    data += sizeof(uint8);
+    cert_type = dtls_uint8_to_int(p);
+    p += sizeof(uint8);
 
-    if (cert_type == TLS_CERT_TYPE_RAW_PUBLIC_KEY)
+    if (cert_type == TLS_CERT_TYPE_PUBLIC_KEY) {
+      dtls_info("we chose TLS_CERT_TYPE_PUBLIC_KEY\n");
+      *cert_type_out = TLS_CERT_TYPE_PUBLIC_KEY;
       return 0;
+    }
+  }
+  
+  /* if its not advertised TLS_CERT_TYPE_RAW_PUBLIC_KEY is our backup */
+  p = data;
+  for (i = data_length - sizeof(uint8); i > 0; i -= sizeof(uint8)) {
+    /* check if this cert type is supported */
+    cert_type = dtls_uint8_to_int(p);
+    p += sizeof(uint8);
+
+    if (cert_type == TLS_CERT_TYPE_RAW_PUBLIC_KEY) {
+      dtls_info("we chose TLS_CERT_TYPE_RAW_PUBLIC_KEY\n");
+      *cert_type_out = TLS_CERT_TYPE_RAW_PUBLIC_KEY;
+      return 0;
+    }
   }
 
   dtls_warn("no supported certificate type found\n");
@@ -827,21 +856,23 @@ dtls_check_tls_extension(dtls_peer_t *peer,
       case TLS_EXT_CLIENT_CERTIFICATE_TYPE:
         ext_client_cert_type = 1;
         if (client_hello) {
-	  if (verify_ext_cert_type(data, j))
+          if (verify_ext_cert_type(&peer->handshake_params->client_cert_type, data, j))
             goto error;
         } else {
-	  if (dtls_uint8_to_int(data) != TLS_CERT_TYPE_RAW_PUBLIC_KEY)
-	    goto error;
+          if (dtls_uint8_to_int(data) != peer->handshake_params->client_cert_type)
+            goto error;
         }
         break;
       case TLS_EXT_SERVER_CERTIFICATE_TYPE:
         ext_server_cert_type = 1;
         if (client_hello) {
-	  if (verify_ext_cert_type(data, j))
+          if (verify_ext_cert_type(&peer->handshake_params->server_cert_type, data, j))
             goto error;
+          //TODO Allow server cert type to be different from client cert type
+          peer->handshake_params->server_cert_type = peer->handshake_params->client_cert_type;
         } else {
-	  if (dtls_uint8_to_int(data) != TLS_CERT_TYPE_RAW_PUBLIC_KEY)
-	    goto error;
+          if (dtls_uint8_to_int(data) != peer->handshake_params->server_cert_type)
+          goto error;
         }
         break;
       case TLS_EXT_EC_POINT_FORMATS:
@@ -1791,10 +1822,10 @@ dtls_send_server_hello(dtls_context_t *ctx, dtls_peer_t *peer)
     dtls_int_to_uint16(p, 1);
     p += sizeof(uint16);
 
-    dtls_int_to_uint8(p, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
+    dtls_int_to_uint8(p, peer->handshake_params->client_cert_type);
     p += sizeof(uint8);
 
-    /* client certificate type extension */
+    /* server certificate type extension */
     dtls_int_to_uint16(p, TLS_EXT_SERVER_CERTIFICATE_TYPE);
     p += sizeof(uint16);
 
@@ -1802,7 +1833,7 @@ dtls_send_server_hello(dtls_context_t *ctx, dtls_peer_t *peer)
     dtls_int_to_uint16(p, 1);
     p += sizeof(uint16);
 
-    dtls_int_to_uint8(p, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
+    dtls_int_to_uint8(p, peer->handshake_params->server_cert_type);
     p += sizeof(uint8);
 
     /* ec_point_formats */
@@ -1834,7 +1865,30 @@ static int
 dtls_send_certificate_ecdsa(dtls_context_t *ctx, dtls_peer_t *peer,
 			    const dtls_ecdsa_key_t *key)
 {
-  uint8 buf[DTLS_CE_LENGTH];
+  //Send certificate type we aggreed on
+  if(peer->handshake_params->server_cert_type == TLS_CERT_TYPE_PUBLIC_KEY) {
+	  uint8 *buf = malloc(2*sizeof(uint24) + key->cert_len);
+    uint8 *p = buf;
+
+  	/* Certificate
+   	 *
+   	 * Start message construction at beginning of buffer. */
+
+    dtls_int_to_uint24(p, key->cert_len+3);  /* fragment length */
+    p += sizeof(uint24);
+
+    dtls_int_to_uint24(p, key->cert_len);    /* certificate length */
+    p += sizeof(uint24);
+
+    memcpy(p, key->cert, key->cert_len);
+    p += key->cert_len;
+
+    int ret = dtls_send_handshake_msg(ctx, peer, DTLS_HT_CERTIFICATE, buf, p - buf);
+    free(buf);
+    return ret;
+  } //else
+
+  uint8 *buf = malloc(DTLS_CE_LENGTH);
   uint8 *p;
 
   /* Certificate 
@@ -1857,10 +1911,9 @@ dtls_send_certificate_ecdsa(dtls_context_t *ctx, dtls_peer_t *peer,
   memcpy(p, key->pub_key_y, DTLS_EC_KEY_SIZE);
   p += DTLS_EC_KEY_SIZE;
 
-  assert(p - buf <= sizeof(buf));
-
-  return dtls_send_handshake_msg(ctx, peer, DTLS_HT_CERTIFICATE,
-				 buf, p - buf);
+  int ret = dtls_send_handshake_msg(ctx, peer, DTLS_HT_CERTIFICATE,  buf, p - buf);
+  free(buf);
+  return ret;    
 }
 
 static uint8 *
@@ -2311,11 +2364,13 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
   uint8_t extension_size;
   int psk;
   int ecdsa;
+  int x509;
   dtls_handshake_parameters_t *handshake = peer->handshake_params;
   dtls_tick_t now;
 
   psk = is_psk_supported(ctx);
   ecdsa = is_ecdsa_supported(ctx, 1);
+  x509 = is_x509_supported(ctx);
 
   cipher_size = 2 + ((ecdsa) ? 2 : 0) + ((psk) ? 2 : 0);
   extension_size = (ecdsa) ? 2 + 6 + 6 + 8 + 6: 0;
@@ -2383,6 +2438,14 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
   }
 
   if (ecdsa) {
+    if(x509) {
+      peer->handshake_params->client_cert_type = TLS_CERT_TYPE_PUBLIC_KEY;
+      peer->handshake_params->server_cert_type = TLS_CERT_TYPE_PUBLIC_KEY;
+    } else {
+      peer->handshake_params->client_cert_type = TLS_CERT_TYPE_RAW_PUBLIC_KEY;
+      peer->handshake_params->server_cert_type = TLS_CERT_TYPE_RAW_PUBLIC_KEY;
+    }
+  
     /* client certificate type extension */
     dtls_int_to_uint16(p, TLS_EXT_CLIENT_CERTIFICATE_TYPE);
     p += sizeof(uint16);
@@ -2395,7 +2458,7 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
     dtls_int_to_uint8(p, 1);
     p += sizeof(uint8);
 
-    dtls_int_to_uint8(p, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
+    dtls_int_to_uint8(p, peer->handshake_params->client_cert_type);
     p += sizeof(uint8);
 
     /* client certificate type extension */
@@ -2410,7 +2473,7 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
     dtls_int_to_uint8(p, 1);
     p += sizeof(uint8);
 
-    dtls_int_to_uint8(p, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
+    dtls_int_to_uint8(p, peer->handshake_params->server_cert_type);
     p += sizeof(uint8);
 
     /* elliptic_curves */
@@ -2557,6 +2620,34 @@ check_server_certificate(dtls_context_t *ctx,
   update_hs_hash(peer, data, data_length);
 
   assert(is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(config->cipher));
+
+  //Expect certificate type we aggreed on
+  if(peer->handshake_params->client_cert_type == TLS_CERT_TYPE_PUBLIC_KEY) {
+    //Fast forward to last length field
+    data += 15;
+    int cert_len = dtls_uint24_to_int(data);
+    data += sizeof(uint24);
+
+    //Check if length field is correct
+    if(data_length - 15 - sizeof(uint24) !=  cert_len) {
+      dtls_alert("announced certificate length does not match actual length\n");
+      return dtls_alert_fatal_create(DTLS_ALERT_DECODE_ERROR);
+    }
+
+    //Validate Certificate Extract Keyspeer->handshake_params->server_cert_type
+    err = CALL(ctx, verify_ecdsa_cert, &peer->session,
+         data, cert_len,
+         config->keyx.ecdsa.other_pub_x,
+         config->keyx.ecdsa.other_pub_y,
+         sizeof(config->keyx.ecdsa.other_pub_x));
+         
+    if (err < 0) {
+      dtls_warn("The certificate was not accepted\n");
+      return err;
+    }
+    return 0;
+
+  } //else
 
   data += DTLS_HS_LENGTH;
 

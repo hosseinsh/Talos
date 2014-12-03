@@ -65,6 +65,8 @@ typedef struct dtls_ecdsa_key_t {
   const unsigned char *priv_key;	/** < private key as bytes > */
   const unsigned char *pub_key_x;	/** < x part of the public key for the given private key > */
   const unsigned char *pub_key_y;	/** < y part of the public key for the given private key > */
+  const unsigned char *cert;      /** < certificate for the given private key > */
+  const unsigned int  cert_len;   /** < length of certificate > */
 } dtls_ecdsa_key_t;
 
 /** Length of the secret that is used for generating Hello Verify cookies. */
@@ -216,6 +218,45 @@ typedef struct {
 			  const unsigned char *other_pub_x,
 			  const unsigned char *other_pub_y,
 			  size_t key_size);
+
+  /**
+   * Called during handshake to check the peer's certificate and
+   * extract the public key. If the public key matches the session
+   * and should be considerate valid the return value must be @c 0.
+   * If not valid, the return value must be less than zero.
+   *
+   * Additionally the public key has to be written to the two buffers
+   * other_pub_x other_pub_y.
+   *
+   * If ECDSA should not be supported, set this pointer to NULL.
+   *
+   * Implement this if you want to verify the other peers public key.
+   * This is mandatory for a DTLS client doing based ECDSA
+   * authentication. A server implementing this will request the
+   * client to do DTLS client authentication.
+   *
+   * @param[in] ctx          The current dtls context.
+   * @param[in] session      The session where the key will be used.
+   * @param[in] cert         Pointer to the Certificate
+   * @param[in] cert_len     Length of the Certificate
+   * @param[out] other_pub_x  x component of the public key.
+   * @param[out] other_pub_y  y component of the public key.
+   * @return @c 0 if public key matches, or less than zero on error.
+   * error codes:
+   *   return dtls_alert_fatal_create(DTLS_ALERT_BAD_CERTIFICATE);
+   *   return dtls_alert_fatal_create(DTLS_ALERT_UNSUPPORTED_CERTIFICATE);
+   *   return dtls_alert_fatal_create(DTLS_ALERT_CERTIFICATE_REVOKED);
+   *   return dtls_alert_fatal_create(DTLS_ALERT_CERTIFICATE_EXPIRED);
+   *   return dtls_alert_fatal_create(DTLS_ALERT_CERTIFICATE_UNKNOWN);
+   *   return dtls_alert_fatal_create(DTLS_ALERT_UNKNOWN_CA);
+   */
+  int (*verify_ecdsa_cert)(struct dtls_context_t *ctx,
+        const session_t *session,
+        const unsigned char *cert, size_t cert_len,
+        unsigned char *other_pub_x,
+        unsigned char *other_pub_y,
+        size_t key_size);
+
 #endif /* DTLS_ECC */
 } dtls_handler_t;
 

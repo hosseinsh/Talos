@@ -125,6 +125,8 @@ static int get_ecdsa_key(struct dtls_context_t *ctx,
     .priv_key  = ecdsa_priv_key,
     .pub_key_x = ecdsa_pub_key_x,
     .pub_key_y = ecdsa_pub_key_y,
+    .cert      = client_cert,
+    .cert_len  = sizeof(client_cert)
   };
   *result = &ecdsa_key;
 
@@ -144,6 +146,29 @@ int verify_ecdsa_key(struct dtls_context_t *ctx,
 			  size_t key_size) {
 
 	return 0;
+}
+
+/**
+ * Called during handshake to check the peer's certificate and
+ * extract the peer's public If the public key matches the session
+ * and should be considerate valid the return value must be @c 0.
+ * If not valid, the return value must be less than zero.
+ *
+ * Additionally the public key has to be written to the two buffers
+ * other_pub_x other_pub_y.
+ */
+int verify_ecdsa_cert(struct dtls_context_t *ctx,
+      const session_t *session,
+      const unsigned char *cert, size_t cert_len,
+      unsigned char *other_pub_x,
+      unsigned char *other_pub_y,
+      size_t key_size) {
+
+  printf(CYAN "ASN.1 Parser is missing, Peer's Public Key is hard coded\n" DEFAULT);
+  memcpy(other_pub_x, ecdsa_pub_key_x, 32);
+  memcpy(other_pub_y, ecdsa_pub_key_y, 32);
+
+  return 0;
 }
 
 /*
@@ -182,6 +207,7 @@ static dtls_handler_t cb = {
   .get_psk_info = get_psk_info,
   .get_ecdsa_key = get_ecdsa_key,
   .verify_ecdsa_key = verify_ecdsa_key,
+  .verify_ecdsa_cert = verify_ecdsa_cert
 };
 
 /*
@@ -211,6 +237,7 @@ static void dtls_handle_read() {
     list_add(dtls_message_list, element);
   }
 }
+
 /*
  * The TinyDTLS runs on a separate stack to allow preemption
  * while long lasting calculation are running on the PKA
