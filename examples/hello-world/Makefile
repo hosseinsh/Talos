@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = hello-world
+CONTIKI_PROJECT = hello-world-test
 all: $(CONTIKI_PROJECT)
 
 #UIP_CONF_IPV6=1
