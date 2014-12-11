@@ -44,7 +44,7 @@
   }
 
 
-PT_THREAD(RAS_create_public(RSA_secrete_state_t *state)) {
+PT_THREAD(RSA_create_public(RSA_secrete_state_t *state)) {
   PT_BEGIN(&state->pt);
  //n=p*q
   CHECK_RESULT(PKABigNumMultiplyStart(state->PrimeQ,state->QSize,state->PrimeP,state->PSize,&state->rv,state->process));
@@ -64,12 +64,12 @@ PT_THREAD(RAS_create_public(RSA_secrete_state_t *state)) {
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   //printf("end of pre-private key\n");
   CHECK_RESULT(PKABigNumMultGetResult(state->PrimeF,&state->FLen,state->rv));
-  printf("get the F\n");
+  //printf("get the F\n");
   PT_END(&state->pt);
 }
 
 
-PT_THREAD(RAS_create_private(RSA_secrete_state_t *state)){
+PT_THREAD(RSA_create_private(RSA_secrete_state_t *state)){
 	PT_BEGIN(&state->pt);
 
 	uint32_t result_temp;
@@ -102,12 +102,10 @@ PT_THREAD(RAS_create_private(RSA_secrete_state_t *state)){
 }
 
 
-PT_THREAD(RAS_encrypt_message(RSA_secrete_state_t *state)){
+PT_THREAD(RSA_encrypt_message(RSA_secrete_state_t *state)){
 	PT_BEGIN(&state->pt);
-	static uint32_t mymesssage[16] = {0xFFFF1111, 0xFFFF1111, 0x00000000, 0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
-	                                      0x00000000, 0x00000000, 0x00000000, 0x00000000,0x00000000,0x00000000,0xFFFF1111,0x00000001};
 
-	CHECK_RESULT(PKABigNumExpModStart(&state->PrimeE, state->ESize, state->PublicN, state->NLen,mymesssage,state->MLen,&state->rv, state->process));
+	CHECK_RESULT(PKABigNumExpModStart(&state->PrimeE, state->ESize, state->PublicN, state->NLen,state->Messagetoencrypt,state->MLen,&state->rv, state->process));
 	PT_WAIT_UNTIL(&state->pt, pka_check_status());
 	CHECK_RESULT(PKABigNumExpModGetResult(state->secretMessage,state->SMLen, state->rv));
 
@@ -115,7 +113,7 @@ PT_THREAD(RAS_encrypt_message(RSA_secrete_state_t *state)){
 }
 
 
-PT_THREAD(RAS_decrypt_message(RSA_secrete_state_t *state)){
+PT_THREAD(RSA_decrypt_message(RSA_secrete_state_t *state)){
 	PT_BEGIN(&state->pt);
 
 	CHECK_RESULT(PKABigNumExpModStart(state->PrviateD, state->DLen, state->PublicN, state->NLen,state->secretMessage,state->SMLen,&state->rv, state->process));
@@ -123,7 +121,27 @@ PT_THREAD(RAS_decrypt_message(RSA_secrete_state_t *state)){
 	CHECK_RESULT(PKABigNumExpModGetResult(state->Messagetoencrypt,state->MLen, state->rv));
 
 	PT_END(&state->pt);
-};
+}
+
+PT_THREAD(RSA_signature_message(RSA_secrete_state_t *state)){
+	PT_BEGIN(&state->pt);
+
+	CHECK_RESULT(PKABigNumExpModStart(state->PrviateD, state->DLen, state->PublicN, state->NLen,state->Messagetoencrypt,state->MLen,&state->rv, state->process));
+	PT_WAIT_UNTIL(&state->pt, pka_check_status());
+	CHECK_RESULT(PKABigNumExpModGetResult(state->secretMessage,state->SMLen, state->rv));
+
+	PT_END(&state->pt);
+}
+
+PT_THREAD(RSA_signature_verification(RSA_secrete_state_t *state)){
+	PT_BEGIN(&state->pt);
+
+	CHECK_RESULT(PKABigNumExpModStart(&state->PrimeE, state->ESize, state->PublicN, state->NLen,state->secretMessage,state->SMLen,&state->rv, state->process));
+	PT_WAIT_UNTIL(&state->pt, pka_check_status());
+	CHECK_RESULT(PKABigNumExpModGetResult(state->Messagetoencrypt,state->MLen, state->rv));
+
+	PT_END(&state->pt);
+}
 
 /**
  * @}

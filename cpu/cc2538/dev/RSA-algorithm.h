@@ -121,7 +121,7 @@ typedef struct {
  * Calculating a Public Key
  */
 //PT_THREAD(ecc_multiply(ecc_multiply_state_t *state));
-PT_THREAD(RAS_create_public(RSA_secrete_state_t *state));
+PT_THREAD(RSA_create_public(RSA_secrete_state_t *state));
 //***********************************************************************
 /**
  * \create private key
@@ -129,7 +129,7 @@ PT_THREAD(RAS_create_public(RSA_secrete_state_t *state));
  *
  * Calculating a private Key
  */
-PT_THREAD(RAS_create_private(RSA_secrete_state_t *state));
+PT_THREAD(RSA_create_private(RSA_secrete_state_t *state));
 
 /**
  * \encrypt message
@@ -137,15 +137,28 @@ PT_THREAD(RAS_create_private(RSA_secrete_state_t *state));
  *
  * encrypting message
  */
-PT_THREAD(RAS_encrypt_message(RSA_secrete_state_t *state));
+PT_THREAD(RSA_encrypt_message(RSA_secrete_state_t *state));
 /**
  * \decrypt message
  *
  *
  * decrypting message
  */
-PT_THREAD(RAS_decrypt_message(RSA_secrete_state_t *state));
-
+PT_THREAD(RSA_decrypt_message(RSA_secrete_state_t *state));
+/**
+ * \signature message
+ *
+ *
+ * signature message
+ */
+PT_THREAD(RSA_signature_message(RSA_secrete_state_t *state));
+/**
+ * \signature verification
+ *
+ *
+ * signature verification
+ */
+PT_THREAD(RSA_signature_verification(RSA_secrete_state_t *state));
 #endif /* RSA_ALGORITHM_H_ */
 
 /**
