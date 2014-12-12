@@ -28,36 +28,64 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
-#include "dev/rom-util.h"
-#include "dev/button-sensor.h"
-
+#include <stdio.h>
 #include <string.h>
+#include <log.h>
 
-PROCESS(flash_erase_process, "Flash Erase Process");
+char *allocated = 0;
 
-PROCESS_THREAD(flash_erase_process, ev, data) {
-  PROCESS_BEGIN();
+caddr_t __attribute__ ((used)) _sbrk(int incr) {
+  extern char _heapdata;  // symbols are defined in cc2538.lds
+  extern char _eheapdata; // they mark end of bss and end of memory.
 
-  /*
-   * Activate Sensors
-   */
-  SENSORS_ACTIVATE(button_sensor);
-
-  /*
-   * Wait for Button 2
-   */
-  while(1) {
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event);
-    if(data == &button_user_sensor) {
-      leds_toggle(LEDS_GREEN);
-      rom_util_page_erase(0x27F800, 0x800);
-      clock_delay_usec(5000);
-      rom_util_reset_device();
-    }
+  if (allocated == 0) {
+    printf("Heap size: 0x%08x\n", (unsigned int)&_eheapdata - (unsigned int)&_heapdata);
+    allocated = &_heapdata;
   }
 
-  PROCESS_END();
+  if (allocated + incr > &_eheapdata) {
+    printf(RED "Out of heap space!\n" DEFAULT);
+    return (caddr_t)0;
+  } else {
+    allocated += incr;
+    return (caddr_t) allocated - incr;
+  }
+}
+
+int _open(const char *name, int flags, int mode) {
+  return 1;
+}
+
+int _close(int file) {
+  return 1;
+}
+
+short _isatty(int fd) {
+  return 1;
+}
+
+int _read(int file, char *ptr, int len) {
+  return 0;
+}
+
+int _write(int file, const char *ptr, int len) {
+  static char buf[256];
+  if(len > 255) len = 255;
+  memcpy(buf, ptr, len);
+  buf[len] = '\0';
+  printf("%s", buf);
+  return len;
+}
+
+int _lseek(int file, int ptr, int dir) {
+  return 0;
+}
+
+int _fstat(int file, void* st) {
+  return 0;
+}
+
+void _exit(int status) {
+  printf(RED "Exit called!\n" DEFAULT);
+  while(1);
 }

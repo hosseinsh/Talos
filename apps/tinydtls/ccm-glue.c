@@ -29,35 +29,78 @@
  * SUCH DAMAGE.
  */
 #include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
-#include "dev/rom-util.h"
-#include "dev/button-sensor.h"
+#include "ccm-glue.h"
+#include "crypto.h"
+#include "ccm.h"
+#include "pt.h"
+#include "mt.h"
+#include "debug.h"
 
-#include <string.h>
-
-PROCESS(flash_erase_process, "Flash Erase Process");
-
-PROCESS_THREAD(flash_erase_process, ev, data) {
-  PROCESS_BEGIN();
-
-  /*
-   * Activate Sensors
-   */
-  SENSORS_ACTIVATE(button_sensor);
-
-  /*
-   * Wait for Button 2
-   */
-  while(1) {
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event);
-    if(data == &button_user_sensor) {
-      leds_toggle(LEDS_GREEN);
-      rom_util_page_erase(0x27F800, 0x800);
-      clock_delay_usec(5000);
-      rom_util_reset_device();
-    }
+int
+hw_ccm_encrypt(aes128_ccm_t *ccm_ctx, const unsigned char *src, size_t srclen,
+                 unsigned char *buf, unsigned char *nounce,
+                 const unsigned char *aad, size_t la) {
+  crypto_enable();
+  if(ccm_auth_encrypt_start(3, 0, nounce, aad, la, buf, srclen, 8, PROCESS_CURRENT())) {
+    crypto_disable();
+    return -1;
   }
 
-  PROCESS_END();
+  while(!ccm_auth_encrypt_check_status()) {
+    mt_yield();
+  }
+
+  if(ccm_auth_encrypt_get_result(buf + srclen, 8)) {
+    crypto_disable();
+    return -1;
+  }
+
+  crypto_disable();
+  return srclen + 8;
+}
+
+int
+hw_ccm_decrypt(aes128_ccm_t *ccm_ctx, const unsigned char *src,
+                 size_t srclen, unsigned char *buf,
+                 unsigned char *nounce,
+                 const unsigned char *aad, size_t la) {
+  crypto_enable();
+  if(ccm_auth_decrypt_start(3, 0, nounce, aad, la, buf, srclen, 8, PROCESS_CURRENT())) {
+    crypto_disable();
+    return -1;
+  }
+
+  while(!ccm_auth_decrypt_check_status()) {
+    mt_yield();
+  }
+
+  if(ccm_auth_decrypt_get_result(buf, srclen-8, 0, 0)) {
+    crypto_disable();
+    return -1;
+  }
+
+  crypto_disable();
+  return srclen - 8;
+}
+
+int
+hw_ccm_set_key(const u_char *key, int bits) {
+  switch(bits) {
+    case 128:
+      bits = AES_KEY_STORE_SIZE_KEY_SIZE_128;
+      break;
+    case 192:
+      bits = AES_KEY_STORE_SIZE_KEY_SIZE_192;
+      break;
+    case 256:
+      bits = AES_KEY_STORE_SIZE_KEY_SIZE_256;
+      break;
+    default:
+      return -1;
+  }
+
+  crypto_enable();
+  int res = aes_load_keys(key, bits, 1, 0);
+  crypto_disable();
+  return -res;
 }

@@ -28,36 +28,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
-#include "dev/rom-util.h"
-#include "dev/button-sensor.h"
+#ifndef ECC_GLUE_H_
+#define ECC_GLUE_H_
 
-#include <string.h>
+extern void ecc_ecdh(const uint32_t *px, const uint32_t *py, const uint32_t *secret, uint32_t *resultx, uint32_t *resulty);
+extern int ecc_is_valid_key(const uint32_t * priv_key);
+extern void ecc_gen_pub_key(const uint32_t *priv_key, uint32_t *pub_x, uint32_t *pub_y);
+extern int ecc_ecdsa_sign(const uint32_t *d, const uint32_t *e, const uint32_t *k, uint32_t *r, uint32_t *s);
+extern int ecc_ecdsa_validate(const uint32_t *x, const uint32_t *y, const uint32_t *e, const uint32_t *r, const uint32_t *s);
 
-PROCESS(flash_erase_process, "Flash Erase Process");
-
-PROCESS_THREAD(flash_erase_process, ev, data) {
-  PROCESS_BEGIN();
-
-  /*
-   * Activate Sensors
-   */
-  SENSORS_ACTIVATE(button_sensor);
-
-  /*
-   * Wait for Button 2
-   */
-  while(1) {
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event);
-    if(data == &button_user_sensor) {
-      leds_toggle(LEDS_GREEN);
-      rom_util_page_erase(0x27F800, 0x800);
-      clock_delay_usec(5000);
-      rom_util_reset_device();
-    }
-  }
-
-  PROCESS_END();
-}
+#endif /* ECC_GLUE_H_ */

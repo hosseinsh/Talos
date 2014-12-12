@@ -28,36 +28,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
-#include "dev/rom-util.h"
-#include "dev/button-sensor.h"
+#ifndef CCM_GLUE_H_
+#define CCM_GLUE_H_
 
-#include <string.h>
+#include "dtlscrypto.h"
 
-PROCESS(flash_erase_process, "Flash Erase Process");
+#define DTLS_CCM_BLOCKSIZE  16	/**< size of hmac blocks */
+#define DTLS_CCM_MAX        16	/**< max number of bytes in digest */
+#define DTLS_CCM_NONCE_SIZE 12	/**< size of nonce */
 
-PROCESS_THREAD(flash_erase_process, ev, data) {
-  PROCESS_BEGIN();
+extern int
+hw_ccm_encrypt(aes128_ccm_t *ccm_ctx, const unsigned char *src, size_t srclen,
+                 unsigned char *buf, unsigned char *nounce,
+                 const unsigned char *aad, size_t la);
 
-  /*
-   * Activate Sensors
-   */
-  SENSORS_ACTIVATE(button_sensor);
+extern int
+hw_ccm_decrypt(aes128_ccm_t *ccm_ctx, const unsigned char *src,
+                 size_t srclen, unsigned char *buf,
+                 unsigned char *nounce,
+                 const unsigned char *aad, size_t la);
 
-  /*
-   * Wait for Button 2
-   */
-  while(1) {
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event);
-    if(data == &button_user_sensor) {
-      leds_toggle(LEDS_GREEN);
-      rom_util_page_erase(0x27F800, 0x800);
-      clock_delay_usec(5000);
-      rom_util_reset_device();
-    }
-  }
+extern int
+hw_ccm_set_key(const u_char *key, int bits);
 
-  PROCESS_END();
-}
+#endif /* CCM_GLUE_H_ */

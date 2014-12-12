@@ -28,36 +28,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
-#include "dev/rom-util.h"
-#include "dev/button-sensor.h"
+#ifndef PROJECT_CONF_H_
+#define PROJECT_CONF_H_
 
-#include <string.h>
+#define UART0_CONF_BAUD_RATE                     115200
 
-PROCESS(flash_erase_process, "Flash Erase Process");
+#define IEEE802154_CONF_PANID                    0xabcd
+#define CC2538_RF_CONF_CHANNEL                       25
+#define NETSTACK_CONF_RDC                nullrdc_driver
 
-PROCESS_THREAD(flash_erase_process, ev, data) {
-  PROCESS_BEGIN();
+#define DTLS_ECHO_PORT                            20220
 
-  /*
-   * Activate Sensors
-   */
-  SENSORS_ACTIVATE(button_sensor);
-
-  /*
-   * Wait for Button 2
-   */
-  while(1) {
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event);
-    if(data == &button_user_sensor) {
-      leds_toggle(LEDS_GREEN);
-      rom_util_page_erase(0x27F800, 0x800);
-      clock_delay_usec(5000);
-      rom_util_reset_device();
-    }
-  }
-
-  PROCESS_END();
-}
+#endif /* PROJECT_CONF_H_ */
