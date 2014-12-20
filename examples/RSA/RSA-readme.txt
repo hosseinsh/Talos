@@ -17,11 +17,10 @@ about the RSA
  * a.  (/cpu/cc2538/dev/)ecc-driver.h ,ecc-driver.c which include the driver for RSA basic operation such as big
  * number add,subtract,multiply,modInv,Expmod operation
  * b.  (/cpu/cc2538/dev/)RSA-algorithm.h,RSA-algorithm.c which include the RSA algorithm functions and data structure
- * c. the rsa-example docment is in the (/example/hello-world/hello-world-test.c)
-(4)important note to RSA
+ * c. the rsa-example docment is in the (/example/RSA/RSA-test.c)
+(4)important note for RSA
  * a. The ModInv operation requires the modulus to be odd. but in RSA f=(q-1)*(p-1)must be even. so the normal
- d = ModInv(e, f) can not be used to calculate the MOdInv. so we use the following equation to solve the promble
+ d = ModInv(e, f) can not be used to calculate the MOdInv. so we use the following equation to solve the problem
  d = (1 + (f x (e – ModInv(f, e))) / e
- So with four additional basic PKCP operations, ModInv can also be used to find inverse values in case the
-modulus is even.
+ So with four additional basic PKCP operations, ModInv can also be used to find inverse values in case the modulus is even.
  
