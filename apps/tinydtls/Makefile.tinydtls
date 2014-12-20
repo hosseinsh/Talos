@@ -4,19 +4,11 @@ ifeq ($(TARGET), redbee-econotag)
 CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412 -DBYTE_ORDER=LITTLE_ENDIAN
 endif
 
-ifeq ($(TARGET), sky)
-CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412
-endif
-
 ifeq ($(TARGET), wismote)
 CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412 -DBYTE_ORDER=LITTLE_ENDIAN
 endif
 
-ifeq ($(TARGET), sky)
-CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412
-endif
-
-ifeq ($(TARGET), wismote)
+ifeq ($(TARGET), exp5438)
 CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412 -DBYTE_ORDER=LITTLE_ENDIAN
 endif
 
@@ -28,10 +20,27 @@ ifeq ($(TARGET), minimal-net)
 CFLAGS += -DSHA2_USE_INTTYPES_H=1
 endif
 
-CFLAGS += -DDTLSv12 -DWITH_SHA256 
-
-ifeq ($(DEX_CCM), 1)
-PROJECT_SOURCEFILES += dtls.c crypto.c hmac.c sha2.c  netq.c debug.c dex_ccm.c dex_cmac.c TI_aes.c
-else
-PROJECT_SOURCEFILES += dtls.c crypto.c hmac.c rijndael.c sha2.c ccm.c netq.c debug.c
+ifeq ($(TARGET), cc2538dk)
+CFLAGS += -DHAVE_ASSERT_H 
+#-DLITTLE_ENDIAN=3412 -DBYTE_ORDER=BYTE_ORDER 1234
 endif
+
+ifeq ($(TARGET), openmote)
+CFLAGS += -DHAVE_ASSERT_H 
+#-DLITTLE_ENDIAN=3412 -DBYTE_ORDER=BYTE_ORDER 1234
+endif
+
+CFLAGS += -DDTLSv12 -DWITH_SHA256 
+tinydtls_src = dtls.c dtlscrypto.c hmac.c netq.c dtls_time.c peer.c session.c
+tinydtls_src += ecc-glue.c ccm-glue.c
+
+# This adds support for TLS_PSK_WITH_AES_128_CCM_8
+CFLAGS += -DDTLS_PSK
+
+# This adds support for TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8
+CFLAGS += -DDTLS_ECC
+
+# This activates debugging support
+# CFLAGS += -DNDEBUG
+tinydtls_src += debug.c
+

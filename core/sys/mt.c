@@ -56,6 +56,7 @@ static struct mt_thread *current;
 void
 mt_init(void)
 {
+  current = NULL;
   mtarch_init();
 }
 /*--------------------------------------------------------------------------*/
@@ -91,7 +92,8 @@ void
 mt_yield(void)
 {
   mtarch_pstop();
-  current->state = MT_STATE_READY;
+  if(current)
+    current->state = MT_STATE_READY;
   current = NULL;
   /* This function is called from the running thread, and we call the
      switch function in order to switch the thread to the main Contiki
@@ -104,7 +106,8 @@ mt_yield(void)
 void
 mt_exit(void)
 {
-  current->state = MT_STATE_EXITED;
+  if(current)
+    current->state = MT_STATE_EXITED;
   current = NULL;
   mtarch_yield();
 }

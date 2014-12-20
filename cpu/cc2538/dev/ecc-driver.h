@@ -38,10 +38,14 @@
  *
  * \defgroup cc2538-ecc cc2538 ECC driver
  *
- * Driver for the cc2538 ECC mode of the PKC engine
+ * Driver for the cc2538 ECC mode and RSA mode of the PKC engine
+ * this file has been changed by hu luo who add the following PKC operation on DEC 2014
+ * PKABigNumSubtractStart PKABigNumSubtractStartP
+ * PKABigNumExpModStart PKABigNumExpModGetResult
+ * PKABigNumDivideStart PKABigNumDivideGetResult
  * @{
  *
- * \file
+ * \file:
  * Header file for the cc2538 ECC driver
  */
 #ifndef ECC_DRIVER_H_
@@ -459,6 +463,166 @@ extern uint8_t PKAECCAddStart(ec_point_t* ptEcPt1, ec_point_t* ptEcPt2,
  * - \b PKA_STATUS_FAILURE if the operation is not successful.
  */
 extern uint8_t PKAECCAddGetResult(ec_point_t* ptOutEcPt, uint32_t ui32ResultLoc);
+//---------------------------------------------------------------------------------
+// below functions are added by hu luo
+/** \brief Starts the substract of two big number.
+ *
+ * \param pui32BN1 is the pointer to the buffer containing the first
+ *        big mumber.
+ * \param ui8BN1Size is the size of the first big number in 32-bit word.
+ * \param pui32BN2 is the pointer to the buffer containing the second
+ *        big number.
+ * \param ui8BN2Size is the size of the second big number in 32-bit word.
+ * \param pui32ResultVector is the pointer to the result vector location
+ *        which will be set by this function.
+ * \param process Process to be polled upon completion of the
+ *        operation, or \c NULL
+ *
+ * This function starts the substraction of the two big numbers.
+ *
+ *\return Returns:
+ * - \b PKA_STATUS_SUCCESS if successful in starting the operation.
+ * - \b PKA_STATUS_OPERATION_INPRG, if the PKA hw module is busy doing
+ *      some other operation.
+ *
+**/
+//
+extern uint8_t PKABigNumSubtractStart(uint32_t* pui32BN1, uint8_t ui8BN1Size,
+                                      uint32_t* pui32BN2, uint8_t ui8BN2Size,
+                                      uint32_t* pui32ResultVector,
+                                      struct process *process);
+/** \brief Gets the result of big number subtract.
+ *
+ * \param pui32ResultBuf is the pointer to store the result of subtraction.
+ * \param pui32ResVectorLoc is the address of the result location which
+ *        was provided by the start function PKABigNumSubtractStart().
+ *
+ * This function gets the result of PKABigNumSubtractStart().
+ *
+ * \return Returns:
+ * - \b PKA_STATUS_SUCCESS if the operation is successful.
+ * - \b PKA_STATUS_OPERATION_INPRG, if the PKA hw module is busy performing
+ *      the operation.
+ * - \b PKA_STATUS_RESULT_0 if the result is all zeroes.
+ * - \b PKA_STATUS_FAILURE if the operation is not successful.
+ */
+extern uint8_t PKABigNumSubtractGetResult(uint32_t* pui32ResultBuf, uint8_t* pui32Len,
+                                          uint32_t ui32ResVectorLoc);
+
+
+/** \brief Starts the big number moduluar Exponentiation operation.
+ *
+ * \param pui32BNum is the pointer to the Exponent on which moduluar Exponentiation operation
+ *        needs to be carried out.
+ * \param ui8BNSize is the size of the the Exponent number pui32BNum in 32-bit
+ *        word.
+ * \param pui32Modulus is the pointer to the divisor.
+ * \param ui8ModSize is the size of the divisor pui32Modulus.
+ *
+ * \param pui32Base is the pointer to the Base.
+ * \param ui8BaseSize is the size of the divisor pui32Base.
+ *
+ * \param pui32ResultVector is the pointer to the result vector location
+ *        which will be set by this function.
+ * \param process Process to be polled upon completion of the
+ *        operation, or \c NULL
+ *
+ * This function starts the moduluar Exponentiation operation on the base num pui32Base
+ * using the Exponent pui32BNum and the Modulus num pui32Modulus.  The PKA RAM location where the result
+ * will be available is stored in \sa pui32ResultVector.
+ *
+ *\return Returns:
+ * - \b PKA_STATUS_SUCCESS if successful in starting the operation.
+ * - \b PKA_STATUS_OPERATION_INPRG, if the PKA hw module is busy doing
+ *      some other operation.
+ */
+extern uint8_t PKABigNumExpModStart(uint32_t* pui32BNum, uint8_t ui8BNSize,
+                                    uint32_t* pui32Modulus, uint8_t ui8ModSize,
+								    uint32_t* pui32Base, uint8_t ui8BaseSize,
+                                    uint32_t* pui32ResultVector,
+                                    struct process *process);
+
+/** \brief Gets the result of the big number modulus operation result.
+ *
+ * \param pui32ResultBuf is the pointer to buffer where the result needs to
+ *        be stored.
+ * \param ui8Size is the size of the provided buffer in 32 bit size word.
+ * \param ui32ResVectorLoc is the address of the result location which
+ *        was provided by the start function \sa PKABigNumExpModStart().
+ *
+ * This function gets the result of the big number modulus operation which was
+ * previously started using the function \sa PKABigNumExpModStart().
+ *
+ * \return Returns:
+ * - \b PKA_STATUS_SUCCESS if successful.
+ * - \b PKA_STATUS_OPERATION_INPRG, if the PKA hw module is busy doing
+ *      the operation.
+ * - \b PKA_STATUS_RESULT_0 if the result is all zeroes.
+ * - \b PKA_STATUS_BUF_UNDERFLOW, if the \e ui8Size is less than the length
+ *      of the result.
+ *
+ *      notes for this function:
+ *      1)0<ui8BNSize<=Max_Len,1<ui8ModSize<=Max_Len
+ *      2)pui32Modulus must be odd and pui32Modulus>232
+ *      3)pui32Base<pui32Modulus
+ */
+extern uint8_t PKABigNumExpModGetResult(uint32_t* pui32ResultBuf,
+                                        uint8_t ui8Size,
+                                        uint32_t ui32ResVectorLoc);
+
+/** \brief Starts the big number Divide.
+ *
+ * \param pui32Xdividend is the pointer to the buffer containing the big
+ *        number dividend.
+ * \param ui8XdividendSize is the size of the dividend in 32-bit word.
+ * \param pui32Xdivisor is the pointer to the buffer containing the big
+ *        number divisor.
+ * \param ui8XdivisorSize is the size of the divisor in 32-bit word.
+ * \param pui32ResultVector is the pointer to the result vector location
+ *        which will be set by this function.
+ * \param process Process to be polled upon completion of the
+ *        operation, or \c NULL
+ *
+ * This function starts the divide of the two big numbers.
+ *
+ *\return Returns:
+ * - \b PKA_STATUS_SUCCESS if successful in starting the operation.
+ * - \b PKA_STATUS_OPERATION_INPRG, if the PKA hw module is busy doing
+ *      some other operation.
+ */
+extern uint8_t PKABigNumDivideStart(uint32_t* pui32Xdividend,
+                                    uint8_t ui8XdividendSize,
+                                    uint32_t* pui32Xdivisor,
+                                    uint8_t ui8XdivisorSize,
+                                    uint32_t* pui32ResultVector,
+                                    struct process *process);
+
+/** \brief Gets the results of the big number Divide.
+ *
+ * \param pui32ResultBuf is the pointer to buffer where the result needs to be
+ *        stored.
+ * \param pui32Len is the address of the variable containing the length of the
+ *        buffer.  After the operation, the actual length of the resultant is
+ *        stored at this address.
+ * \param ui32ResVectorLoc is the address of the result location which
+ *        was provided by the start function \sa PKABigNumMultiplyStart().
+ *
+ * This function gets the result of the Divide of two big numbers
+ * operation previously started using the function \sa
+ * PKABigNumDivideStart().
+ *
+ * \return Returns:
+ * - \b PKA_STATUS_SUCCESS if the operation is successful.
+ * - \b PKA_STATUS_OPERATION_INPRG, if the PKA hw module is busy performing
+ *      the operation.
+ * - \b PKA_STATUS_RESULT_0 if the result is all zeroes.
+ * - \b PKA_STATUS_FAILURE if the operation is not successful.
+ * - \b PKA_STATUS_BUF_UNDERFLOW if the length of the provided buffer is less
+ *      then the length of the result.
+ */
+extern uint8_t PKABigNumDivideGetResult(uint32_t* pui32ResultBuf,
+                                        uint32_t* pui32Len,
+                                        uint32_t ui32ResVectorLoc);
 
 /** @} */
 

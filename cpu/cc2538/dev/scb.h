@@ -72,8 +72,32 @@
 #define SCB_SYSCTRL_SLEEPEXIT  0x00000002  /**< Sleep on ISR exit */
 /** @} */
 /*---------------------------------------------------------------------------*/
+/** \name SCB_INTCTRL / NVIC_INT_CTRL register bits
+ * @{
+ */
+#define SCB_INTCTRL_NMI_SET   0x80000000   /**< NMI Set Pending */
+#define SCB_INTCTRL_PEND_SV   0x10000000   /**< PendSV Set Pending */
+#define SCB_INTCTRL_UNPEND_SV 0x08000000   /**< PendSV Clear Pending */
+#define SCB_INTCTRL_PENDSTSET 0x04000000   /**< SysTick Set Pending */
+#define SCB_INTCTRL_PENDSTCLR 0x02000000   /**< SysTick Clear Pending */
+#define SCB_INTCTRL_ISR_PRE   0x00800000   /**< Debug Interrupt Handling */
+#define SCB_INTCTRL_ISR_PEND  0x00400000   /**< Interrupt Pending */
+/** @} */
+/*---------------------------------------------------------------------------*/
+/** \name SCB_SYSPRI3 / NVIC_SYS_PRI3 register bits
+ * @{
+ */
+#define SCB_INTCTRL_PRI3_TICK_M    0xE0000000  /**< SysTick Exception Priority */
+#define SCB_INTCTRL_PRI3_PENDSV_M  0x00E00000  /**< PendSV Priority */
+#define SCB_INTCTRL_PRI3_DEBUG_M   0x000000E0  /**< Debug Priority */
+#define SCB_INTCTRL_PRI3_TICK_S    29
+#define SCB_INTCTRL_PRI3_PENDSV_S  21
+#define SCB_INTCTRL_PRI3_DEBUG_S   5
+
+/** @} */
 
 #endif /* SCB_H_ */
+/*---------------------------------------------------------------------------*/
 
 /**
  * @}

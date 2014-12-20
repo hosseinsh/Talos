@@ -35,7 +35,11 @@
 /**
  * \addtogroup cc2538-ecc
  * @{
- *
+ * Driver for the cc2538 ECC mode and RSA mode of the PKC engine
+ * this file has been changed by hu luo who add the following PKC operation on DEC 2014
+ * PKABigNumSubtractStart PKABigNumSubtractStartP
+ * PKABigNumExpModStart PKABigNumExpModGetResult
+ * PKABigNumDivideStart PKABigNumDivideGetResult
  * \file
  * Implementation of the cc2538 ECC driver
  */
@@ -297,12 +301,14 @@ uint8_t PKABigNumInvModStart(uint32_t* pui32BNum, uint8_t ui8BNSize,
 
   // Determine the offset for result data.
   offset += 4 * (i + ui8Size % 2);
+//printf("%x",offset);
+
 
   // Copy the result vector address location.
   *pui32ResultVector = PKA_RAM_BASE + offset;
-
   // Load D ptr with the result location in PKA RAM.
-  REG((PKA_DPTR)) = offset >> 2;
+   REG((PKA_DPTR)) = offset >> 2;
+  //*pui32ResultVector = REG((PKA_DPTR));
 
   // Load the respective length registers.
   REG((PKA_ALENGTH)) = ui8BNSize;
@@ -353,7 +359,7 @@ uint8_t PKABigNumInvModGetResult(uint32_t* pui32ResultBuf, uint8_t ui8Size,
   // Get the length of the result
   len = ((regMSWVal & PKA_MSW_MSW_ADDRESS_M) + 1)
       - ((ui32ResVectorLoc - PKA_RAM_BASE) >> 2);
-
+ //printf("length==%u\n",len);
   // Check if the provided buffer length is adequate to store the result
   // data.
   if(ui8Size < len) {
@@ -472,6 +478,7 @@ uint8_t PKABigNumMultGetResult(uint32_t* pui32ResultBuf, uint32_t* pui32Len,
 
   // Make sure that the length of the supplied result buffer is adequate
   // to store the resultant.
+  //printf("%u\n",(unsigned int) len);
   if(*pui32Len < len) {
     return (PKA_STATUS_BUF_UNDERFLOW);
   }
@@ -1102,5 +1109,389 @@ uint8_t PKAECCAddGetResult(ec_point_t* ptOutEcPt, uint32_t ui32ResVectorLoc) {
     return (PKA_STATUS_FAILURE);
   }
 }
+//--------------------------------------------------------------------
+// below functions are added by hu luo
+uint8_t PKABigNumSubtractStart(uint32_t* pui32BN1, uint8_t ui8BN1Size,
+                          uint32_t* pui32BN2, uint8_t ui8BN2Size,
+                          uint32_t* pui32ResultVector, struct process *process) {
 
+  uint32_t offset;
+  int i;
+
+  // Check for arguments.
+  ASSERT(NULL != pui32BN1);
+  ASSERT(NULL != pui32BN2);
+  ASSERT(NULL != pui32ResultVector);
+
+  offset = 0;
+
+  // Make sure no operation is in progress.
+  if((REG(PKA_FUNCTION) & PKA_FUNCTION_RUN) != 0) {
+    return (PKA_STATUS_OPERATION_INPRG);
+  }
+
+  // Update the A ptr with the offset address of the PKA RAM location
+  // where the big number 1 will be stored.
+  REG((PKA_APTR)) = offset >> 2;
+
+  // Load the big number 1 in PKA RAM.
+  for(i = 0; i < ui8BN1Size; i++) {
+    REG((PKA_RAM_BASE + offset + 4 * i)) = pui32BN1[i];
+  }
+
+  // Determine the offset in PKA RAM for the next data.
+  offset += 4 * (i + (ui8BN1Size % 2));
+
+  // Update the B ptr with the offset address of the PKA RAM location
+  // where the big number 2 will be stored.
+  REG((PKA_BPTR)) = offset >> 2;
+
+  // Load the big number 2 in PKA RAM.
+  for(i = 0; i < ui8BN2Size; i++) {
+    REG((PKA_RAM_BASE + offset + 4 * i)) = pui32BN2[i];
+  }
+
+  // Determine the offset in PKA RAM for the next data.
+  offset += 4 * (i + (ui8BN2Size % 2));
+
+  // Copy the result vector address location.
+  *pui32ResultVector = PKA_RAM_BASE + offset;
+
+  // Load C ptr with the result location in PKA RAM.
+  REG((PKA_CPTR)) = offset >> 2;
+
+  // Load respective length registers.
+  REG((PKA_ALENGTH)) = ui8BN1Size;
+  REG((PKA_BLENGTH)) = ui8BN2Size;
+
+  // Set the function for the add operation and start the operation.
+  REG((PKA_FUNCTION)) = (PKA_FUNCTION_RUN | PKA_FUNCTION_SUBTRACT);
+
+  // Enable Interrupt
+  if(process != NULL) {
+    pka_register_process_notification(process);
+    nvic_interrupt_unpend(NVIC_INT_PKA);
+    nvic_interrupt_enable(NVIC_INT_PKA);
+  }
+
+  return (PKA_STATUS_SUCCESS);
+}
+/*---------------------------------------------------------------------------*/
+uint8_t PKABigNumSubtractGetResult(uint32_t* pui32ResultBuf, uint8_t* pui32Len,
+                              uint32_t ui32ResVectorLoc) {
+
+  uint32_t regMSWVal;
+  uint32_t len;
+  int i;
+
+  // Check for the arguments.
+  ASSERT(NULL != pui32ResultBuf);
+  ASSERT(NULL != pui32Len);
+  ASSERT(ui32ResVectorLoc > PKA_RAM_BASE);
+  ASSERT(ui32ResVectorLoc < (PKA_RAM_BASE + PKA_RAM_SIZE));
+
+  // Verify that the operation is complete.
+  if((REG(PKA_FUNCTION) & PKA_FUNCTION_RUN) != 0) {
+    return (PKA_STATUS_OPERATION_INPRG);
+  }
+
+  // Disable Interrupt
+  nvic_interrupt_disable(NVIC_INT_PKA);
+  pka_register_process_notification(NULL);
+
+  // Get the MSW register value.
+  regMSWVal = REG(PKA_MSW);
+
+  // Check to make sure that the result vector is not all zeroes.
+  if(regMSWVal & PKA_MSW_RESULT_IS_ZERO) {
+    return (PKA_STATUS_RESULT_0);
+  }
+
+  // Get the length of the result.
+  len = ((regMSWVal & PKA_MSW_MSW_ADDRESS_M) + 1)
+      - ((ui32ResVectorLoc - PKA_RAM_BASE) >> 2);
+
+  // Make sure that the supplied result buffer is adequate to store the
+  // resultant data.
+  if(*pui32Len < len) {
+    return (PKA_STATUS_BUF_UNDERFLOW);
+  }
+
+  // Copy the length.
+  *pui32Len = len;
+
+  // Copy the result from vector C into the provided buffer.
+  for(i = 0; i < *pui32Len; i++) {
+    pui32ResultBuf[i] = REG((ui32ResVectorLoc + 4 * i));
+  }
+
+  return (PKA_STATUS_SUCCESS);
+}
+/*---------------------------------------------------------------------------*/
+extern uint8_t PKABigNumExpModStart(uint32_t* pui32BNum, uint8_t ui8BNSize,
+                                 uint32_t* pui32Modulus, uint8_t ui8ModSize,
+								 uint32_t* pui32Base, uint8_t ui8BaseSize,
+                                 uint32_t* pui32ResultVector,
+                                 struct process *process)
+{
+	  uint8_t extraBuf;
+	  uint32_t offset;
+	  int i;
+
+	  // Check for the arguments.
+	  ASSERT(NULL != pui32BNum);
+	  //ASSERT(NULL != ui8BNSize);
+	  ASSERT(NULL != pui32Modulus);
+	  //ASSERT(NULL != ui8ModSize);
+	  ASSERT(NULL != pui32Base);
+	  //ASSERT(NULL != ui8BaseSize);
+	  ASSERT(NULL != pui32ResultVector);
+
+	  offset = 0;
+
+	  // Make sure no PKA operation is in progress.
+	  if((REG(PKA_FUNCTION) & PKA_FUNCTION_RUN) != 0) {
+	    return (PKA_STATUS_OPERATION_INPRG);
+	  }
+
+	  // Calculate the extra buffer requirement.
+	  extraBuf = 2 + ui8BaseSize % 2;
+
+	  // Update the A ptr with the offset address of the PKA RAM location
+	  // where the exponent will be stored.
+	  REG((PKA_APTR)) = offset >> 2;
+
+	  // Load the Exponent in PKA RAM.
+	  for(i = 0; i < ui8BNSize; i++) {
+	    REG((PKA_RAM_BASE + offset + 4 * i)) = pui32BNum[i];
+	    //printf("the A register is ,%d\n",pui32BNum[i]);
+	  }
+
+	  // Determine the offset for the next data(BPTR).
+	  offset += 4 * (i + ui8BNSize % 2 );
+      //printf("the B offset is ,%d\n",offset);
+	  // Update the B ptr with the offset address of the PKA RAM location
+	  // where the divisor will be stored.
+	  REG((PKA_BPTR)) = offset >> 2;
+
+	  // Load the Modulus in PKA RAM.
+	   for(i = 0; i < ui8ModSize; i++) {
+	     REG((PKA_RAM_BASE + offset + 4 * i)) = pui32Modulus[i];
+	     //printf("the B register is ,%X\n",pui32Modulus[i]);
+	   }
+
+	  // Determine the offset for the next data(CPTR).
+	  offset += 4 * (i + ui8ModSize % 2 + 2 );
+	  //printf("the C offset is ,%d\n",offset);
+	  // Update the C ptr with the offset address of the PKA RAM location
+	  // where the Base will be stored.
+	  REG((PKA_CPTR)) = offset >> 2;
+
+	  // Write Base to the Vector C in PKA RAM
+
+	  for(i = 0; i < ui8BaseSize; i++) {
+	    REG((PKA_RAM_BASE + offset + 4 * i)) = pui32Base[i];
+	    //printf("the C register is ,%X\n",pui32Base[i]);
+	  }
+
+	  // Determine the offset for the next data.
+	  offset += 4 * (i + extraBuf + 2);
+
+	 // printf("the D offset is ,%d\n",offset);
+	  // Copy the result vector address location.
+	   *pui32ResultVector = PKA_RAM_BASE + offset;
+
+	   // Load D ptr with the result location in PKA RAM
+	   REG((PKA_DPTR)) = offset >> 2;
+
+	    // Load A length registers with Big number length in 32 bit words.
+	   REG((PKA_ALENGTH)) = ui8BNSize;
+
+	    // Load B length registers  Divisor length in 32-bit words.
+	   REG((PKA_BLENGTH)) = ui8ModSize;
+
+	    // Start the PKCP modulo exponentiation operation(EXPMod-variable)by setting the PKA Function register.
+	   REG((PKA_FUNCTION)) = 0x0000A000;
+
+	    // Enable Interrupt
+	   if(process != NULL) {
+	      pka_register_process_notification(process);
+	      nvic_interrupt_unpend(NVIC_INT_PKA);
+	      nvic_interrupt_enable(NVIC_INT_PKA);
+	    }
+
+	   return (PKA_STATUS_SUCCESS);
+
+}
+//--------------------------------------------------------------------------------
+uint8_t PKABigNumExpModGetResult(uint32_t* pui32ResultBuf, uint8_t ui8Size,
+                              uint32_t ui32ResVectorLoc) {
+
+  uint32_t regMSWVal;
+  uint32_t len;
+  int i;
+
+  // Check the arguments.
+  ASSERT(NULL != pui32ResultBuf);
+  ASSERT(ui32ResVectorLoc > PKA_RAM_BASE);
+  ASSERT(ui32ResVectorLoc < (PKA_RAM_BASE + PKA_RAM_SIZE));
+
+  // verify that the operation is complete.
+  if((REG(PKA_FUNCTION) & PKA_FUNCTION_RUN) != 0) {
+    return (PKA_STATUS_OPERATION_INPRG);
+  }
+
+  // Disable Interrupt
+  nvic_interrupt_disable(NVIC_INT_PKA);
+  pka_register_process_notification(NULL);
+
+  //  Get the MSW register value.
+  regMSWVal = REG(PKA_MSW);
+
+    // Check to make sure that the result vector is not all zeroes.
+    if(regMSWVal & PKA_MSW_RESULT_IS_ZERO) {
+      return (PKA_STATUS_RESULT_0);
+    }
+
+    // Get the length of the result
+    len = ((regMSWVal & PKA_MSW_MSW_ADDRESS_M) + 1)
+        - ((ui32ResVectorLoc - PKA_RAM_BASE) >> 2);
+  // If the size of the buffer provided is less than the result length than
+  // return error.
+    //printf("length= %d\n",(unsigned int) len);
+  if(ui8Size < len) {
+    return (PKA_STATUS_BUF_UNDERFLOW);
+  }
+
+  // copy the result from vector C into the pResult.
+  for(i = 0; i < len; i++) {
+    pui32ResultBuf[i] = REG((ui32ResVectorLoc + 4 * i));
+  }
+
+  return (PKA_STATUS_SUCCESS);
+}
+
+/*---------------------------------------------------------------------------*/
+uint8_t PKABigNumDivideStart(uint32_t* pui32Xdividend, uint8_t ui8XdividendSize,
+		uint32_t* pui32Xdivisor, uint8_t ui8XdivisorSize,uint32_t* pui32ResultVector,
+        struct process *process) {
+
+  uint8_t extraBuf;
+  uint32_t offset;
+  int i;
+
+  // Check for the arguments.
+  ASSERT(NULL != pui32Xdividend);
+  ASSERT(NULL != pui32Xdivisor);
+  ASSERT(NULL != pui32ResultVector);
+
+  offset = 0;
+
+  // Make sure no operation is in progress.
+  if((REG(PKA_FUNCTION) & PKA_FUNCTION_RUN) != 0) {
+    return (PKA_STATUS_OPERATION_INPRG);
+  }
+
+  extraBuf = 2 + ui8XdivisorSize % 2;
+  // Update the A ptr with the offset address of the PKA RAM location
+  // where the multiplicand will be stored.
+  REG((PKA_APTR)) = offset >> 2;
+
+  // Load the multiplicand in PKA RAM.
+  for(i = 0; i < ui8XdividendSize; i++) {
+    REG((PKA_RAM_BASE + offset + 4 * i)) = *pui32Xdividend;
+    pui32Xdividend++;
+  }
+
+  // Determine the offset for the next data.
+  offset += 4 * (i + (ui8XdividendSize % 2));
+
+  // Update the B ptr with the offset address of the PKA RAM location
+  // where the multiplier will be stored.
+  REG((PKA_BPTR)) = offset >> 2;
+
+  // Load the multiplier in PKA RAM.
+  for(i = 0; i < ui8XdivisorSize; i++) {
+    REG((PKA_RAM_BASE + offset + 4 * i)) = *pui32Xdivisor;
+    pui32Xdivisor++;
+  }
+
+  // Determine the offset for the next data.
+  offset += 4 * (i + extraBuf);
+
+  // Copy the result vector address location.
+  *pui32ResultVector = PKA_RAM_BASE + offset;
+
+  // Load D ptr with the result location in PKA RAM.
+  REG((PKA_DPTR)) = offset >> 2;
+
+  // Load the respective length registers.
+  REG((PKA_ALENGTH)) = ui8XdividendSize;
+  REG((PKA_BLENGTH)) = ui8XdivisorSize;
+
+  // Set the PKA function to the multiplication and start it.
+  REG((PKA_FUNCTION)) = (PKA_FUNCTION_RUN | PKA_FUNCTION_DIVIDE);
+
+  // Enable Interrupt
+  if(process != NULL) {
+    pka_register_process_notification(process);
+    nvic_interrupt_unpend(NVIC_INT_PKA);
+    nvic_interrupt_enable(NVIC_INT_PKA);
+  }
+
+  return (PKA_STATUS_SUCCESS);
+}
+
+/*---------------------------------------------------------------------------*/
+uint8_t PKABigNumDivideGetResult(uint32_t* pui32ResultBuf, uint32_t* pui32Len,
+                                 uint32_t ui32ResVectorLoc) {
+
+  uint32_t regMSWVal;
+  uint32_t len;
+  int i;
+
+  // Check for arguments.
+  ASSERT(NULL != pui32ResultBuf);
+  ASSERT(NULL != pui32Len);
+  ASSERT(ui32ResVectorLoc > PKA_RAM_BASE);
+  ASSERT(ui32ResVectorLoc < (PKA_RAM_BASE + PKA_RAM_SIZE));
+
+  // Verify that the operation is complete.
+  if((REG(PKA_FUNCTION) & PKA_FUNCTION_RUN) != 0) {
+    return (PKA_STATUS_OPERATION_INPRG);
+  }
+
+  // Disable Interrupt
+  nvic_interrupt_disable(NVIC_INT_PKA);
+  pka_register_process_notification(NULL);
+
+  // Get the MSW register value.
+  regMSWVal = REG(PKA_MSW);
+
+  // Check to make sure that the result vector is not all zeroes.
+  if(regMSWVal & PKA_MSW_RESULT_IS_ZERO) {
+    return (PKA_STATUS_RESULT_0);
+  }
+
+  // Get the length of the result.
+  len = ((regMSWVal & PKA_MSW_MSW_ADDRESS_M) + 1)
+      - ((ui32ResVectorLoc - PKA_RAM_BASE) >> 2);
+
+  // Make sure that the length of the supplied result buffer is adequate
+  // to store the resultant.
+  //printf("%u\n",(unsigned int) len);
+  if(*pui32Len < len) {
+    return (PKA_STATUS_BUF_UNDERFLOW);
+  }
+
+  // Copy the resultant length.
+  *pui32Len = len;
+
+  // Copy the result from vector C into the pResult.
+  for(i = 0; i < *pui32Len; i++) {
+    pui32ResultBuf[i] = REG((ui32ResVectorLoc + 4 * i));
+  }
+
+  return (PKA_STATUS_SUCCESS);
+}
 /** @} */

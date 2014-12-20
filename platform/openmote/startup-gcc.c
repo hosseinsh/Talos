@@ -52,7 +52,11 @@ void nmi_handler(void);
 void default_handler(void);
 
 /* System Handler and ISR prototypes implemented elsewhere */
-void clock_isr(void); /* SysTick Handler */
+#if USE_PREEMPTION
+void preemption_isr(void); /* Does SysTick and Preemption */
+#else
+void clock_isr(void);      /* SysTick Handler */
+#endif
 void gpio_port_a_isr(void);
 void gpio_port_b_isr(void);
 void gpio_port_c_isr(void);
@@ -64,6 +68,7 @@ void udma_isr(void);
 void udma_err_isr(void);
 void aes_isr(void);
 void pka_isr(void);
+void pend_sv_isr(void);
 
 /* Boot Loader Backdoor selection */
 #if FLASH_CCA_CONF_BOOTLDR_BACKDOOR
@@ -137,8 +142,12 @@ void(*const vectors[])(void) =
   default_handler,            /* 11 SVCall handler */
   default_handler,            /* 12 Debug monitor handler */
   0,                          /* 13 Reserved */
-  default_handler,            /* 14 The PendSV handler */
+  pend_sv_isr,                /* 14 The PendSV handler */
+#if USE_PREEMPTION
+  preemption_isr,             /* 15 The SysTick handler */
+#else
   clock_isr,                  /* 15 The SysTick handler */
+#endif
   gpio_port_a_isr,            /* 16 GPIO Port A */
   gpio_port_b_isr,            /* 17 GPIO Port B */
   gpio_port_c_isr,            /* 18 GPIO Port C */

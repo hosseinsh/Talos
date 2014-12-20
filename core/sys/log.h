@@ -36,6 +36,19 @@
 
 #include "contiki-conf.h"
 
+/*
+ * Colors used to highlight debug output
+ */
+#define BLACK   "\033[0;30;49m"
+#define RED     "\x1b[0;31;49m"
+#define GREEN   "\x1b[0;32;49m"
+#define YELLOW  "\x1b[0;33;49m"
+#define BLUE    "\x1b[0;34;49m"
+#define MAGENTA "\x1b[0;35;49m"
+#define CYAN    "\x1b[0;36;49m"
+#define WHITE   "\x1b[0;37;49m"
+#define DEFAULT "\x1b[0m"
+
 #if LOG_CONF_ENABLED
 void log_message(const char *part1, const char *part2);
 #else /* LOG_CONF_ENABLED */

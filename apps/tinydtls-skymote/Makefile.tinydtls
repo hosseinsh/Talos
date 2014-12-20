@@ -1,0 +1,37 @@
+# This is a -*- Makefile -*-
+
+ifeq ($(TARGET), redbee-econotag)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412 -DBYTE_ORDER=LITTLE_ENDIAN
+endif
+
+ifeq ($(TARGET), sky)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412
+endif
+
+ifeq ($(TARGET), wismote)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412 -DBYTE_ORDER=LITTLE_ENDIAN
+endif
+
+ifeq ($(TARGET), sky)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412
+endif
+
+ifeq ($(TARGET), wismote)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1 -DLITTLE_ENDIAN=3412 -DBYTE_ORDER=LITTLE_ENDIAN
+endif
+
+ifeq ($(TARGET), native)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1
+endif
+
+ifeq ($(TARGET), minimal-net)
+CFLAGS += -DSHA2_USE_INTTYPES_H=1
+endif
+
+CFLAGS += -DDTLSv12 -DWITH_SHA256 
+
+ifeq ($(DEX_CCM), 1)
+PROJECT_SOURCEFILES += dtls.c crypto.c hmac.c sha2.c  netq.c debug.c dex_ccm.c dex_cmac.c TI_aes.c
+else
+PROJECT_SOURCEFILES += dtls.c crypto.c hmac.c rijndael.c sha2.c ccm.c netq.c debug.c
+endif
