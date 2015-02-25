@@ -1,19 +1,20 @@
-The Contiki Operating System
+Crypto-Engine-Contiki
 ============================
 
-[![Build Status](https://secure.travis-ci.org/contiki-os/contiki.png)](http://travis-ci.org/contiki-os/contiki)
+The OpenMote (cc2538) platform offers hardware crypto engines supporting SHA256, AES, and Public Key Crypto operations. We utilize the crypto engines for all crypto operations involved in DTLS to have a better performance.
 
-Contiki is an open source operating system that runs on tiny low-power
-microcontrollers and makes it possible to develop applications that
-make efficient use of the hardware while providing standardized
-low-power wireless communication for a range of hardware platforms.
+In this repo, we share the required drivers to access the crypto engines, and a modified DTLS implementation that can both run on softwarebased crypto libriaries, but most importantly as well supports the hardware crypto.
 
-Contiki is used in numerous commercial and non-commercial systems,
-such as city sound monitoring, street lights, networked electrical
-power meters, industrial monitoring, radiation monitoring,
-construction site monitoring, alarm systems, remote house monitoring,
-and so on.
+We would like to share:
+ * the drivers for the crypto engine in cpu/cc2538/dev/
+ * example code how to use the crypo engines' API in example/cc2538dk/crypto
+ * the modified tinydtls-based implemention of DTLS in examples/tinydtls
 
-For more information, see the Contiki website:
+Ongoing work:
+ * We are evaluating our implementation thoroughly and plan to share our resutls in the near future.
 
-[http://contiki-os.org](http://contiki-os.org)
+
+Main contributors to this repo are:
+ * Andreas Dröscher <contiki@anticat.ch>
+ * Hossein Shafagh <shafagh@inf.ethz.ch>
+ * Wen Hu and his team <wen.hu@unsw.edu.au>
