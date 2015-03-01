@@ -69,6 +69,9 @@ MEMORY
     SRAM (RWX) : ORIGIN = SRAM_START, LENGTH = SRAM_LEN
 }
 
+//End of HEAP, BEGIN is relative, see below.
+_eheapdata = SRAM_START + SRAM_LEN;
+ 
 SECTIONS
 {
     .text :
@@ -76,13 +79,16 @@ SECTIONS
         _text = .;
         KEEP(*(.vectors))
         *(.text*)
+        _rodata = ABSOLUTE(.); 
         *(.rodata*)
         _etext = .;
     } > FLASH= 0
 
     .socdata (NOLOAD) :
     {
+        _socdata  = ABSOLUTE(.); 
         *(.udma_channel_control_table)
+        _esocdata  = ABSOLUTE(.); 
     } > SRAM
 
     .data :
@@ -103,8 +109,8 @@ SECTIONS
         *(.bss*)
         *(COMMON)
         _ebss = .;
+        //Begin of HEAP, END is absolute, see above.
         _heapdata  = ABSOLUTE(.); 
-        _eheapdata = _bss + SRAM_LEN; 
     } > SRAM
 
 #if (LPM_CONF_MAX_PM==2) && (LPM_CONF_ENABLE != 0)
