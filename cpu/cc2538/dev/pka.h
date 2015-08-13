@@ -59,7 +59,7 @@
 #define PKA_MAX_CURVE_SIZE              12  /**< Define for the maximum curve
                                                  size supported by the PKA module
                                                  in 32 bit word. */
-#define PKA_MAX_LEN                     12  /**< Define for the maximum length of
+#define PKA_MAX_LEN                     64  /**< Define for the maximum length of
                                                  the big number supported by the
                                                  PKA module in 32 bit word. */
 /** @} */
