@@ -54,6 +54,7 @@
 #include "sys/rtimer.h"
 #include "dev/crypto.h"
 #include "dev/sha256.h"
+#include "flash-erase.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -61,7 +62,7 @@
 #include <string.h>
 /*---------------------------------------------------------------------------*/
 PROCESS(sha256_test_process, "sha256 test process");
-AUTOSTART_PROCESSES(&sha256_test_process);
+AUTOSTART_PROCESSES(&sha256_test_process, &flash_erase_process);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(sha256_test_process, ev, data)
 {
