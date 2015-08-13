@@ -40,6 +40,8 @@
 #define MTARCH_STACKSIZE 1024
 #endif
 
+#define MTARCH_REGISTER_COUNT 16
+
 /**
  * Structure of the Initial Stack
  */

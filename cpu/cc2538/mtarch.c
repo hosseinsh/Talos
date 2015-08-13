@@ -95,9 +95,7 @@ void mtarch_start(struct mtarch_thread *thread,
                   void *data) {
 
   //Calculate SP
-  stack_struture_t* sp = (stack_struture_t*)(thread->stack
-                                             + MTARCH_STACKSIZE
-                                             - sizeof(stack_struture_t)/4);
+  stack_struture_t* sp = (stack_struture_t*) &thread->stack[MTARCH_STACKSIZE - MTARCH_REGISTER_COUNT];
   thread->sp = sp;
 
   //Zero Stack
