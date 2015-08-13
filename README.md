@@ -25,8 +25,8 @@ Main contributors to this repo are:
 
 Please reference our paper, in case of using any part of this repo:
 
- Hossein Shafagh, Anwar Hithnawi, Andreas Dröscher, Simon Duquennoy, Wen Hu
- **Talos: Encrypted Query Processing for the Internet of Things.**
- Proceedings of the 13th ACM Conference on Embedded Networked Sensor Systems (SenSys’15). Seoul, South Korea, November 2015
+Hossein Shafagh, Anwar Hithnawi, Andreas Dröscher, Simon Duquennoy, Wen Hu 
+**Talos: Encrypted Query Processing for the Internet of Things.** 
+Proceedings of the 13th ACM Conference on Embedded Networked Sensor Systems (SenSys’15). Seoul, South Korea, November 2015 
  [Bibtex](http://www.vs.inf.ethz.ch/publ/bibtex.html?file=papers/mshafagh_SenSys15_Talos)
 
