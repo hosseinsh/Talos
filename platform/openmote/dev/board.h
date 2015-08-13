@@ -142,6 +142,11 @@
 #define SPI_MISO_PIN             4
 #define SPI_SEL_PORT             GPIO_A_NUM
 #define SPI_SEL_PIN              3
+
+#define ETH_INT_PORT             GPIO_D_NUM
+#define ETH_INT_PIN              0
+#define ETH_INT_VECTOR           NVIC_INT_GPIO_PORT_D
+
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**

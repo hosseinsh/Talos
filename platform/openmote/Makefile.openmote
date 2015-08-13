@@ -9,7 +9,7 @@ CONTIKI_TARGET_DIRS = . dev
 CONTIKI_TARGET_SOURCEFILES += leds.c leds-arch.c
 CONTIKI_TARGET_SOURCEFILES += contiki-main.c
 CONTIKI_TARGET_SOURCEFILES += sensors.c smartrf-sensors.c button-sensor.c
-CONTIKI_TARGET_SOURCEFILES += antenna.c
+CONTIKI_TARGET_SOURCEFILES += antenna.c tps62730.c
 
 TARGET_START_SOURCEFILES += startup-gcc.c
 TARGET_STARTFILES = ${addprefix $(OBJECTDIR)/,${call oname, $(TARGET_START_SOURCEFILES)}}
@@ -33,9 +33,65 @@ MODULES += core/net core/net/ipv6 core/net/mac core/net/ip \
 
 BSL = $(CONTIKI)/tools/cc2538-bsl/cc2538-bsl.py
 
+
+# Check if we are running under Windows
+ifeq ($(HOST_OS),Windows)
+    USBDEVPREFIX=/dev/com
+    SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-windows
+    MOTELIST = $(CONTIKI)/tools/sky/motelist-windows
+    MOTES = $(shell $(MOTELIST) | grep COM | \
+        cut -f 4 -d \  | \
+        perl -ne 'print $$1 - 1 . " " if(/COM(\d+)/);')
+    CMOTES = $(shell $(MOTELIST) | grep COM | \
+        cut -f 4 -d \  | \
+    perl -ne 'print $$1 . " " if(/COM(\d+)/);')
+else
+    ifeq ($(HOST_OS),Darwin)
+        USBDEVPREFIX=
+        SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-macos
+        MOTELIST = $(CONTIKI)/tools/sky/motelist-macos
+        MOTES = $(shell $(MOTELIST) 2>&- | grep usbserial | \
+            cut -f 4 -d \  | \
+            perl -ne 'print $$1 . " " if(m-(/dev/[\w+\.\-]+)-);')
+        CMOTES=$(MOTES)
+    else
+        # Else we assume Linux
+        USBDEVPREFIX=
+        SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-linux
+        MOTELIST = $(CONTIKI)/tools/sky/motelist-linux
+        MOTES = $(shell $(MOTELIST) 2>&- | grep USB | \
+            cut -f 4 -d \  | \
+            perl -ne 'print $$1 . " " if(m-(/dev/[\w+\.\-]+)-);')
+        CMOTES=$(MOTES)
+    endif
+endif
+
+motelist:
+	$(MOTELIST)
+
 %.upload: %.bin
 ifeq ($(wildcard $(BSL)), )
 	@echo "ERROR: Could not find the cc2538-bsl script. Did you run 'git submodule update --init' ?"
 else
 	python $(BSL) -b 250000 -e -w -v $<
+endif
+
+ifdef MOTE
+serialdump:
+	$(SERIALDUMP) -b115200 $(USBDEVPREFIX)$(word $(MOTE), $(CMOTES)) | $(CONTIKI)/tools/timestamp | tee serialdump-`date +%Y%m%d-%H%M`
+
+serialview:
+	$(SERIALDUMP) -b115200 $(USBDEVPREFIX)$(word $(MOTE), $(CMOTES)) | $(CONTIKI)/tools/timestamp
+
+login:
+	$(SERIALDUMP) -b115200 $(USBDEVPREFIX)$(word $(MOTE), $(CMOTES))
+else
+serialdump:
+	$(SERIALDUMP) -b115200 $(USBDEVPREFIX)$(firstword $(CMOTES)) | $(CONTIKI)/tools/timestamp | tee serialdump-`date +%Y%m%d-%H%M`
+
+serialview:
+	$(SERIALDUMP) -b115200 $(USBDEVPREFIX)$(firstword $(CMOTES)) | $(CONTIKI)/tools/timestamp
+
+login:
+	$(SERIALDUMP) -b115200 $(USBDEVPREFIX)$(firstword $(CMOTES))
 endif

@@ -32,8 +32,8 @@
 #ifndef TPS62730_H_
 #define TPS62730_H_
 
-void tps72730_init(void);
-void tps72730_internal(void);
-void tps72730_external(void);
+void tps62730_init(void);
+void tps62730_on(void);
+void tps62730_bypass(void);
 
 #endif /* TPS62730_H_ */
