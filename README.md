@@ -4,7 +4,7 @@ Talos: Encrypted Query Processing for the Internet of Things (Source code of our
 In this repo we share the code used for our Talos paper published in ACM SenSys 2015.
 Talos is proto-type implementation of encrypted data processing for IoT data. To show the feasablity and practicablity of encrypted data processing for the IoT, we have implemented a set of encryption algorithms for the OpenMote platform in the Contiki OS. We have utilized the hardware crypto acceleator to make the crypto operations more efficient.
 
-OpenMotes (see http://www.openmote.com/) are based on the TI CC2538 microcon-troller, i.e., 32-bit ARM Cortex-M35 SoC at 32 MHz, with a public-key cryptographic accelerator running up to 250 MHz. They are equipped with 802.15.4 compliant RF transceivers, 32 kB of RAM and 512 kB of ROM.
+OpenMotes (see http://www.openmote.com/) are based on the TI CC2538 microcontroller, i.e., 32-bit ARM Cortex-M35 SoC at 32 MHz, with a public-key cryptographic accelerator running up to 250 MHz. They are equipped with 802.15.4 compliant RF transceivers, 32 kB of RAM and 512 kB of ROM.
 
 We integrate the following encryption schemes in our system:
   * Standard AES-modes, and AES-CMC
