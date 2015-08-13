@@ -49,6 +49,7 @@
 #ifndef ECC_PROCESS_H_
 #define ECC_PROCESS_H_
 
+#include "bignum-driver.h"
 #include "ecc-driver.h"
 
 typedef struct  {
@@ -98,6 +99,58 @@ typedef struct {
  * Calculating a Public Key for ECDSA
  */
 PT_THREAD(ecc_multiply(ecc_multiply_state_t *state));
+
+typedef struct {
+  //Containers for the State
+  struct pt      pt;
+  struct process *process;
+
+  //Input Variables
+  ecc_curve_info_t* curve_info; //Curve defining the CyclicGroup
+
+  //Variables Holding intermediate data (initialized/used internally)
+  uint32_t    rv;               //Address of Next Result in PKA SRAM
+
+  //Output Variables
+  uint8_t     result;           //Result Code
+  uint32_t    secret[12];       //Secret Key
+  ec_point_t  public;           //Public Point
+
+} ecc_generate_state_t;
+
+/**
+ * \brief Generate a key pair
+ *
+ * This function first generates secret and makes sure is
+ * is valid (smaller as order). Second a matching public key
+ * is generated.
+ */
+PT_THREAD(ecc_generate(ecc_generate_state_t *state));
+
+typedef struct {
+  //Containers for the State
+  struct pt      pt;
+  struct process *process;
+
+  //Input Variables
+  ecc_curve_info_t* curve_info; //Curve defining the CyclicGroup
+  ec_point_t  point_a;          //Point A
+  ec_point_t  point_b;          //Point B
+
+  //Variables Holding intermediate data (initialized/used internally)
+  uint32_t    rv;               //Address of Next Result in PKA SRAM
+
+  //Output Variables
+  uint8_t     result;           //Result Code
+  ec_point_t  point_out;        //Sum of A and B
+} ecc_add_state_t;
+
+/**
+ * \brief Do a Addition on a EC
+ *
+ * This function can be used to add two points
+ */
+PT_THREAD(ecc_add(ecc_add_state_t *state));
 
 typedef struct {
   //Containers for the State
