@@ -1,10 +1,11 @@
 /*
- * Original file:
- * Copyright (C) 2013 Texas Instruments Incorporated - http://www.ti.com/
+ * Original file: https://raw.githubusercontent.com/jdiez17/blowfish
+ *
+ * Copyright (c) 2014, Institute for Pervasive Computing, ETH Zurich.
  * All rights reserved.
  *
  * Port to Contiki:
- * Copyright (c) 2014 Andreas Dröscher <contiki@anticat.ch>
+ *       Hossein Shafagh <shafagh@inf.ethz.ch>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,34 +34,36 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- * \addtogroup cc2538-ecc
+ * \addtogroup sofware-crypto
  * @{
  *
- * \defgroup cc2538-ecc-curves cc2538 NIST curves
+ * \defgroup crypto blowfish
  *
- * NIST curves for various key sizes
+ * Implementation of blowfish block encryption
  * @{
  *
  * \file
- * NIST curves for various key sizes
+ * Header file for the blowfish block encryption
  */
-#ifndef ECC_CURVE_H_
-#define ECC_CURVE_H_
+#ifndef BLOWFISH_H_
+#define BLOWFISH_H_
 
-/*
- * NIST P-256, X9.62 prime256v1
- */
-extern ecc_curve_info_t nist_p_256;
+#include <stdint.h>
 
-/*
- * NIST P-192, X9.62
- */
-extern ecc_curve_info_t nist_p_192;
+#define PASSES 16
+#define SBOXES 4
 
+#define BLOWFISH_ENCRYPT 1
+#define BLOWFISH_DECRYPT 2
 
-#endif /* CURVE_INFO_H_ */
+#define BLOWFISH_MAX_KEY_BYTES 56
 
-/**
- * @}
- * @}
- */
+typedef struct {
+    uint32_t pass[PASSES+2];
+    uint32_t sbox[4][256];
+} blowfish_t;
+
+void blowfish_cipher(blowfish_t* container, uint32_t* xl, uint32_t* xr, uint8_t mode);
+uint32_t blowfish_initialize(unsigned char* key, uint32_t length, blowfish_t* container);
+
+#endif /* BLOWFISH_H_ */

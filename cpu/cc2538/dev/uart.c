@@ -136,7 +136,7 @@
  * Baud rate defines used in uart_init() to set the values of UART_IBRD and
  * UART_FBRD in order to achieve the configured baud rates.
  */
-#define UART_CLOCK_RATE       16000000 /* 16 MHz */
+#define UART_CLOCK_RATE       32000000 /* 32 MHz */
 #define UART_CTL_HSE_VALUE    0
 #define UART_CTL_VALUE        (UART_CTL_RXE | UART_CTL_TXE | (UART_CTL_HSE_VALUE << 5))
 

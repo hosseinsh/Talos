@@ -45,6 +45,7 @@
  *     Example demonstrating ECDSA-Sign on the cc2538dk platform
  */
 #include "contiki.h"
+#include "flash-erase.h"
 #include "ecc-algorithm.h"
 #include "ecc-curve.h"
 #include "rtimer.h"
@@ -54,7 +55,7 @@
 #include <stdio.h>
 
 PROCESS(ecdsa_sign_test, "ecdsa sign test");
-AUTOSTART_PROCESSES(&ecdsa_sign_test);
+AUTOSTART_PROCESSES(&ecdsa_sign_test, &flash_erase_process);
 
 PROCESS_THREAD(ecdsa_sign_test, ev, data) {
 	PROCESS_BEGIN();

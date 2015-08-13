@@ -45,6 +45,7 @@
  *     Example demonstrating ECDH on the cc2538dk platform
  */
 #include "contiki.h"
+#include "flash-erase.h"
 #include "ecc-algorithm.h"
 #include "ecc-curve.h"
 #include "random.h"
@@ -60,15 +61,8 @@ void ecc_setRandom(uint32_t *secret) {
   }
 }
 
-void ecc_printNumber(const uint32_t *x, int numberLength) {
-  int n; for(n = numberLength - 1; n >= 0; n--){
-    printf("%08x", (unsigned int)x[n]);
-  }
-  printf("\n");
-}
-
 PROCESS(ecdh_test, "ecdh test");
-AUTOSTART_PROCESSES(&ecdh_test);
+AUTOSTART_PROCESSES(&ecdh_test, &flash_erase_process);
 
 PROCESS_THREAD(ecdh_test, ev, data) {
 	PROCESS_BEGIN();

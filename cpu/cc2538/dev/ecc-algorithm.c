@@ -40,10 +40,19 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <random.h>
 
 #include "ecc-algorithm.h"
 #include "ecc-driver.h"
 #include "pka.h"
+
+#if !defined(START_ECC_TIMER)
+#define START_ECC_TIMER(index)
+#endif
+
+#if !defined(STOP_ECC_TIMER)
+#define STOP_ECC_TIMER(index, id)
+#endif
 
 #define CHECK_RESULT(...)                                                    \
   state->result = __VA_ARGS__;                                               \
@@ -51,6 +60,12 @@
     printf("Line: %u Error: %u\n", __LINE__, (unsigned int) state->result);  \
     PT_EXIT(&state->pt);                                                     \
   }
+
+static void ecc_random(uint32_t *secret, uint32_t size) {
+  uint32_t i; for (i = 0; i < size; ++i) {
+    secret[i] = (uint32_t)random_rand() | (uint32_t)random_rand() << 16;
+  }
+}
 
 PT_THREAD(ecc_compare(ecc_compare_state_t *state)) {
   PT_BEGIN(&state->pt);
@@ -65,9 +80,38 @@ PT_THREAD(ecc_compare(ecc_compare_state_t *state)) {
 PT_THREAD(ecc_multiply(ecc_multiply_state_t *state)) {
   PT_BEGIN(&state->pt);
 
+  START_ECC_TIMER(7);
   CHECK_RESULT(PKAECCMultiplyStart(state->secret, &state->point_in, state->curve_info, &state->rv, state->process));
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKAECCMultiplyGetResult(&state->point_out, state->rv));
+  STOP_ECC_TIMER(7, 7);
+
+  PT_END(&state->pt);
+}
+
+PT_THREAD(ecc_generate(ecc_generate_state_t *state)) {
+  PT_BEGIN(&state->pt);
+
+  do {
+    ecc_random(state->secret, state->curve_info->ui8Size);
+    CHECK_RESULT(PKABigNumCmpStart(state->secret, state->curve_info->pui32N, state->curve_info->ui8Size, state->process));
+    PT_WAIT_UNTIL(&state->pt, pka_check_status());
+    state->result = PKABigNumCmpGetResult();
+  } while (state->result != PKA_STATUS_A_LT_B);
+
+  CHECK_RESULT(PKAECCMultGenPtStart(state->secret, state->curve_info, &state->rv, state->process));
+  PT_WAIT_UNTIL(&state->pt, pka_check_status());
+  CHECK_RESULT(PKAECCMultGenPtGetResult(&state->public, state->rv));
+
+  PT_END(&state->pt);
+}
+
+PT_THREAD(ecc_add(ecc_add_state_t *state)) {
+  PT_BEGIN(&state->pt);
+
+  CHECK_RESULT(PKAECCAddStart(&state->point_a, &state->point_b, state->curve_info, &state->rv, state->process));
+  PT_WAIT_UNTIL(&state->pt, pka_check_status());
+  CHECK_RESULT(PKAECCAddGetResult(&state->point_out, state->rv));
 
   PT_END(&state->pt);
 }
@@ -89,9 +133,11 @@ PT_THREAD(ecc_dsa_sign(ecc_dsa_sign_state_t *state)) {
   CHECK_RESULT(PKABigNumInvModGetResult(state->k_e_inv, size, state->rv));
 
   //Calculate Point R = K_e * GeneratorPoint
+  START_ECC_TIMER(7);
   CHECK_RESULT(PKAECCMultiplyStart(state->k_e, &point, state->curve_info, &state->rv, state->process));
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKAECCMultiplyGetResult(&state->point_r, state->rv));
+  STOP_ECC_TIMER(7, 7);
 
   //Calculate signature using big math functions
   //d*r (r is the x coordinate of PointR)
@@ -169,6 +215,7 @@ PT_THREAD(ecc_dsa_verify(ecc_dsa_verify_state_t *state)) {
   CHECK_RESULT(PKABigNumModGetResult(state->u2, size, state->rv));
 
   //Calculate p1 = u1 * A (Generator)
+  START_ECC_TIMER(7);
   CHECK_RESULT(PKAECCMultiplyStart(state->u1, &point, state->curve_info, &state->rv, state->process));
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKAECCMultiplyGetResult(&state->p1, state->rv));
@@ -177,6 +224,7 @@ PT_THREAD(ecc_dsa_verify(ecc_dsa_verify_state_t *state)) {
   CHECK_RESULT(PKAECCMultiplyStart(state->u2, &state->public, state->curve_info, &state->rv, state->process));
   PT_WAIT_UNTIL(&state->pt, pka_check_status());
   CHECK_RESULT(PKAECCMultiplyGetResult(&state->p2, state->rv));
+  STOP_ECC_TIMER(7, 7);
 
   //Calculate P = p1 + p2
   CHECK_RESULT(PKAECCAddStart(&state->p1, &state->p2, state->curve_info, &state->rv, state->process));

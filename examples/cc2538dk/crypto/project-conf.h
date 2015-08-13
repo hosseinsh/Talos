@@ -28,47 +28,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef MTARCH_H_
-#define MTARCH_H_
+#ifndef PROJECT_CONF_H_
+#define PROJECT_CONF_H_
 
-#include "contiki.h"
-#include "stdint.h"
+#define FLASH_CCA_CONF_BOOTLDR_BACKDOOR_ACTIVE_HIGH   1
+#define FLASH_CCA_CONF_BOOTLDR_BACKDOOR_PORT_A_PIN    5
 
-#ifdef MTARCH_CONF_STACKSIZE
-#define MTARCH_STACKSIZE MTARCH_CONF_STACKSIZE
-#else
-#define MTARCH_STACKSIZE 1024
-#endif
-
-#define MTARCH_REGISTER_COUNT 16
-
-/**
- * Structure of the Initial Stack
- */
-typedef struct {
-  //Stack frame that is saved by the hardware
-  void* r4;
-  void* r5;
-  void* r6;
-  void* r7;
-  void* r8;
-  void* r9;
-  void* r10;
-  void* r11;
-  //Stack frame that is saved by the hardware
-  void* r0;   //Ptr to Argument (*data)
-  void* r1;
-  void* r2;
-  void* r3;
-  void* r12;
-  void* lr;   //Ptr to Cleanup Function
-  void* pc;   //Ptr to Function (*function)
-  void* psr;  //Reset Value: 0x01000000
-} stack_struture_t;
-
-struct mtarch_thread {
-  uint32_t stack[MTARCH_STACKSIZE];
-  void     *sp;
-};
-
-#endif /* MTARCH_H_ */
+#endif /* PROJECT_CONF_H_ */

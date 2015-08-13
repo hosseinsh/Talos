@@ -71,12 +71,11 @@ sys_ctrl_init()
    * System Clock: 32 MHz
    * Power Down Unused
    * I/O Div: 16MHz
-   * Sys Div: 16MHz
+   * Sys Div: 32MHz
    * Rest: Don't care
    */
 
-  val = SYS_CTRL_OSCS | SYS_CTRL_CLOCK_CTRL_OSC_PD
-      | SYS_CTRL_CLOCK_CTRL_IO_DIV_16MHZ | SYS_CTRL_CLOCK_CTRL_SYS_DIV_16MHZ;
+  val = SYS_CTRL_OSCS | SYS_CTRL_CLOCK_CTRL_OSC_PD | SYS_CTRL_CLOCK_CTRL_IO_DIV_16MHZ;
   REG(SYS_CTRL_CLOCK_CTRL) = val;
 
   while((REG(SYS_CTRL_CLOCK_STA) & (SYS_CTRL_CLOCK_STA_OSC32K |

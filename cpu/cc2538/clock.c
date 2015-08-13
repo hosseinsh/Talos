@@ -74,8 +74,8 @@ static volatile uint64_t rt_ticks_startup = 0, rt_ticks_epoch = 0;
  *
  * We also initialise GPT0:Timer A, which is used by clock_delay_usec().
  * We use 16-bit range (individual), count-down, one-shot, no interrupts.
- * The system clock is at 16MHz giving us 62.5 nano sec ticks for Timer A.
- * Prescaled by 16 gives us a very convenient 1 tick per usec
+ * The system clock is at 32MHz giving us 31.25 nano sec ticks for Timer A.
+ * Prescaled by 32 gives us a very convenient 1 tick per usec
  */
 void
 clock_init(void)
@@ -105,8 +105,8 @@ clock_init(void)
   /* One-Shot, Count Down, No Interrupts */
   REG(GPT_0_BASE | GPTIMER_TAMR) = GPTIMER_TAMR_TAMR_ONE_SHOT;
 
-  /* Prescale by 16 (thus, value 15 in TAPR) */
-  REG(GPT_0_BASE | GPTIMER_TAPR) = 0x0F;
+  /* Prescale by 32 (thus, value 31 in TAPR) */
+  REG(GPT_0_BASE | GPTIMER_TAPR) = 0x1f;
 }
 /*---------------------------------------------------------------------------*/
 CCIF clock_time_t

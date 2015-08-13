@@ -45,6 +45,7 @@
  *     Example demonstrating ECDSA-Verify on the cc2538dk platform
  */
 #include "contiki.h"
+#include "flash-erase.h"
 #include "ecc-algorithm.h"
 #include "ecc-curve.h"
 #include "rtimer.h"
@@ -54,7 +55,7 @@
 #include <stdio.h>
 
 PROCESS(ecdsa_verify_test, "ecdsa verify test");
-AUTOSTART_PROCESSES(&ecdsa_verify_test);
+AUTOSTART_PROCESSES(&ecdsa_verify_test, &flash_erase_process);
 
 PROCESS_THREAD(ecdsa_verify_test, ev, data) {
 	PROCESS_BEGIN();

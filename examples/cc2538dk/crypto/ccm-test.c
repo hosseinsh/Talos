@@ -54,6 +54,7 @@
 #include "sys/rtimer.h"
 #include "dev/crypto.h"
 #include "dev/ccm.h"
+#include "flash-erase.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -61,7 +62,7 @@
 #include <string.h>
 /*---------------------------------------------------------------------------*/
 PROCESS(ccm_test_process, "ccm test process");
-AUTOSTART_PROCESSES(&ccm_test_process);
+AUTOSTART_PROCESSES(&ccm_test_process, &flash_erase_process);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(ccm_test_process, ev, data)
 {
