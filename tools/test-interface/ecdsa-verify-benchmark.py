@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2014, Institute for Pervasive Computing, ETH Zurich.
+# All rights reserved.
+#
+# Author: Andreas Dröscher <contiki@anticat.ch>
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the Institute nor the names of its contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+import sys, os, binascii
+
+from TerminalApplication import TerminalApplication
+from TestInterface.CavsReader import CavsReader
+from TestInterface.MeasurementWriter import MeasurementWriter
+from TestInterface.AppECC import AppECC
+
+class EccApplication(TerminalApplication):
+  def define_arguments(self, parser):
+    parser.add_argument("-n", "--cycles",  dest="cycles",  metavar="n", help="run benchmark n times (default: 1)", default=1);
+    parser.add_argument("-o", "--output",  dest="output",  metavar="o", help="save measurements (JSON) into o");
+    parser.add_argument('-s', "--section", dest="sections",metavar="s", help="section(s) to use i.e, \"[P-192,SHA-256]\"", action="append", required=True);
+    parser.add_argument(                   dest="file",                 help="CAVS response files");
+
+  def instantiate_interface(self, args):
+    return AppECC();
+
+  def execute_test(self, client, args):
+    #Prepare Measurement Writer
+    measurements = MeasurementWriter(args.output)
+
+    #Run Tests
+    test_vectors = CavsReader(args.file, None, ["Msg", "Qx", "Qy", "R", "S", "Result"]);
+    for section in args.sections:
+        #Select Curve Once
+        test_vectors.selectSection(section);
+        client.selectCurve(section);
+        nb = 1;
+
+        #for Each Entry
+        for entry in test_vectors:
+          if args.output and entry["Result"].split()[0] == "F":
+            sys.stdout.write("Skipping bad Signature Test (Section: %s, Index: %d).\n" % (section, nb));
+            nb = nb+1;
+            continue;
+          else:
+            sys.stdout.write("Running Test (Section: %s, Index: %d): " % (section, nb));
+            nb = nb+1;
+
+          #Upload Keys once
+          client.setPublicKey(entry["Qx"], entry["Qy"]);
+          client.uploadData(len(binascii.a2b_hex(entry["Msg"])), binascii.a2b_hex(entry["Msg"]));
+
+          #Calculate Public Key cycle times
+          i = 0;
+          while i < int(args.cycles):
+            try:
+              client.clearTimer();
+              client.verifySignature(len(binascii.a2b_hex(entry["Msg"])), entry["R"], entry["S"]);
+
+              if entry["Result"].split()[0] == "P":
+                if client.getLong(client.payload, 0) != 0:
+                  raise RuntimeError("Test Vector: '%s' failed." % entry["Msg"]);
+              elif client.getLong(client.payload, 0) == 0:
+                raise RuntimeError("Test Vector: '%s' failed." % entry["Msg"]);
+
+              #Add Measurement
+              raw_measurement = client.readMeasurements();
+              measurements.add("%s-tot" % (client.getNumSize()*4*8), {nb-1: raw_measurement[1]});
+              measurements.add("%s-mul1" % (client.getNumSize()*4*8), {nb-1: raw_measurement[7]});
+              if len(raw_measurement) > 2:
+                measurements.add("%s-mul2" % (client.getNumSize()*4*8), {nb-1: raw_measurement[8]});
+              sys.stdout.write(".");
+              i = i + 1;
+            except Exception, e:
+              sys.stdout.write("x");
+            sys.stdout.flush();
+          sys.stdout.write(" success.\n");
+
+    measurements.save();
+    return 0;
+
+if __name__ == "__main__":
+  app = EccApplication();
+  sys.exit(app.main());
