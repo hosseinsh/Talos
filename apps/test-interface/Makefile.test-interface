@@ -1,0 +1,4 @@
+test-interface_src += app_ccm.c app_ecc.c app_management.c
+test-interface_src += app_sha256.c app_timer.c app_debug.c
+test-interface_src += app_elgamal.c app_aes.c app_pailler.c
+test-interface_src += test-interface.c app_blowfish.c
