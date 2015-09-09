@@ -59,7 +59,7 @@ class TerminalApplication(object):
 
   def main(self):
     try:
-      # Setup argument parser
+      #Setup argument parser
       parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter);
       parser.add_argument("-a", "--ip-address",dest="ip",      metavar="a",          help="TCP/IP Address to use instead of serial port");
       parser.add_argument("-p", "--port",      dest="port",    metavar="p",          help="TCP Port to use in conjunction with address");    
@@ -67,14 +67,14 @@ class TerminalApplication(object):
       parser.add_argument("-r", "--relic",     dest="engine",  action="store_true",  help="use relics implementation (default: hw)");
       parser.add_argument("-e", "--export",    dest="export",  action="store_true",  help="enable timer output on GPIOs");
 
-      # Call into subclass for additional arguments
+      #Call into subclass for additional arguments
       self.define_arguments(parser);
 
       #Process arguments
       args = parser.parse_args();
 
-      # Call into subclass to obtain test interface
-      # TODO Rewrite test interface to make this hack obsolete
+      #Call into subclass to obtain test interface
+      #TODO Rewrite test interface to make this hack obsolete
       client = self.instantiate_interface(args);
 
       #Connect to Target
@@ -100,20 +100,20 @@ class TerminalApplication(object):
         except AttributeError:
           sys.stderr.write("Hardware crypto not available!\n");
 
-      #Enable Timer output on GPIOs  
+      #Enable Timer output on GPIOs
       if args.export:
         client.enableTimerOutput();
 
-      # Call into subclass to execute test and return result ocde
+      #Call into subclass to execute test and return result ocde
       return self.execute_test(client, args);
 
     #Handle keyboard interrupt
     except KeyboardInterrupt:
       return 1;
 
-    #Handle keyboard exceptions
-    #except Exception, e:
-    #  indent = len(self.program_name) * " ";
-    #  sys.stderr.write(self.program_name + ": " + repr(e) + "\n");
-    #  sys.stderr.write(indent + "  for help use --help\n");
-    #  return 2;
+    #Handle remaining exceptions
+    except Exception, e:
+      indent = len(self.program_name) * " ";
+      sys.stderr.write(self.program_name + ": " + repr(e) + "\n");
+      sys.stderr.write(indent + "  for help use --help\n");
+      return 2;
