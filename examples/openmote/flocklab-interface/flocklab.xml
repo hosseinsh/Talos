@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testConf xmlns="http://www.flocklab.ethz.ch" 
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+          xsi:schemaLocation="http://www.flocklab.ethz.ch xml/flocklab.xsd">
+
+  <!-- General configuration -->
+  <generalConf>
+    <name>FlockLab Test</name>
+    <description>
+      Tests all GPIOs
+    </description>
+    <scheduleAsap><durationSecs>60</durationSecs></scheduleAsap>
+    <emailResults>no</emailResults>
+  </generalConf>
+
+  <!-- Target configuration -->
+  <targetConf>
+    <obsIds>003 006 008 015 016 018 022 023 024 031</obsIds>
+    <voltage>3.3</voltage>
+    <embeddedImageId>flocklab</embeddedImageId>
+  </targetConf>
+
+  <serialConf>
+    <obsIds>003 006 008 015 016 018 022 023 024 031</obsIds>
+    <baudrate>115200</baudrate>
+    <mode>raw</mode>
+    <port>serial</port>
+  </serialConf>
+
+  <gpioTracingConf>
+    <obsIds>003 006 008 015 016 018 022 023 024 031</obsIds>
+    <pinConf>
+      <pin>INT1</pin>
+      <edge>both</edge>
+      <mode>continuous</mode>
+    </pinConf>
+    <pinConf>
+      <pin>INT2</pin>
+      <edge>both</edge>
+      <mode>continuous</mode>
+    </pinConf>
+    <pinConf>
+      <pin>LED1</pin>
+      <edge>both</edge>
+      <mode>continuous</mode>
+    </pinConf>
+    <pinConf>
+      <pin>LED2</pin>
+      <edge>both</edge>
+      <mode>continuous</mode>
+    </pinConf>
+    <pinConf>
+      <pin>LED3</pin>
+      <edge>both</edge>
+      <mode>continuous</mode>
+    </pinConf>
+  </gpioTracingConf>
+  
+  <gpioActuationConf>
+    <obsIds>003 006 008 015 016 018 022 023 024 031</obsIds>
+    <pinConf>
+      <pin>SIG1</pin>
+      <level>high</level>
+      <periodic>
+        <intervalMicrosecs>10000000</intervalMicrosecs>
+        <count>6</count>
+      </periodic>
+      <relativeTime>
+        <offsetSecs>0</offsetSecs>
+      </relativeTime>
+    </pinConf>
+    <pinConf>
+      <pin>SIG1</pin>
+      <level>low</level>
+      <periodic>
+        <intervalMicrosecs>10000000</intervalMicrosecs>
+        <count>6</count>
+      </periodic>
+      <relativeTime>
+        <offsetSecs>5</offsetSecs>
+      </relativeTime>
+    </pinConf>
+    <pinConf>
+      <pin>SIG2</pin>
+      <level>high</level>
+      <periodic>
+        <intervalMicrosecs>10000000</intervalMicrosecs>
+        <count>6</count>
+      </periodic>
+      <relativeTime>
+        <offsetSecs>5</offsetSecs>
+      </relativeTime>
+    </pinConf>
+    <pinConf>
+      <pin>SIG2</pin>
+      <level>low</level>
+      <periodic>
+        <intervalMicrosecs>10000000</intervalMicrosecs>
+        <count>6</count>
+      </periodic>
+      <relativeTime>
+        <offsetSecs>10</offsetSecs>
+      </relativeTime>
+    </pinConf>
+  </gpioActuationConf>
+  
+  <imageConf>
+    <embeddedImageId>flocklab</embeddedImageId>
+    <name>FlockLab Test</name>
+    <description></description>
+    <platform>openmote</platform>
+    <os>contiki</os>
+    <data>  <!-- base64 encoded elf --> </data>
+  </imageConf>
+</testConf>
