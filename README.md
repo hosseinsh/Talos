@@ -19,9 +19,15 @@ Important modlues that could be re-used in other projects are:
   * benchmark code is as well in example/cc2538dk/crypto/
   * mOPE and Blowfish are in apps/
 
+
 Main contributors to this repo are:
  * Andreas Dröscher <contiki@anticat.ch>
  * Hossein Shafagh <shafagh@inf.ethz.ch>
+
+Beanchmark: 
+For benchmarking, we provide in the test-interface in tools/test-interface.
+The test-interface can be used standalone, as in example/test-interface or in combination with Flocklab as in examples/openmote/flocklab-interface
+
 
 Please reference our paper, in case of using any part of this repo:
 
